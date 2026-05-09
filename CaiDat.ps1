@@ -21,7 +21,7 @@ Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\Office\16.0\Wef" -Recurse -Force 
 # Cai dat qua Developer (Sideloading) - Day la cach duy nhat hien thi nut tren Ribbon
 $registryPath = "HKCU:\Software\Microsoft\Office\16.0\WEF\Developer"
 New-Item -Path $registryPath -Force | Out-Null
-$guid = "e3d99f22-f555-43c7-a92c-09b55e22ccdd"
+$guid = "a1b2c3d4-1111-2222-3333-444455556666"
 Set-ItemProperty -Path $registryPath -Name $guid -Value $manifestTarget
 
 Write-Host "=> DA CAI DAT XONG TEP HE THONG!"

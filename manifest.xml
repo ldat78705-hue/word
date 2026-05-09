@@ -4,8 +4,8 @@
            xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
-  <Id>e3d99f22-f555-43c7-a92c-09b55e22ccdd</Id>
-  <Version>1.0.1.2</Version>
+  <Id>a1b2c3d4-1111-2222-3333-444455556666</Id>
+  <Version>1.0.1.4</Version>
   <ProviderName>AddonWord Team</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Tiện ích"/>

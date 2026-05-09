@@ -1,9 +1,6 @@
 /* global Office, Word */
 
-// Maps for Encoding
-const vniMap = {"aù":"á", "aà":"à", "aû":"ả", "aõ":"ã", "aï":"ạ", "aâ":"â", "aá":"ấ", "aà":"ầ", "aå":"ẩ", "aã":"ẫ", "aä":"ậ", "aê":"ă", "aé":"ắ", "aè":"ằ", "aú":"ẳ", "aø":"ẵ", "aë":"ặ", "eù":"é", "eà":"è", "eû":"ẻ", "eõ":"ẽ", "eï":"ẹ", "eâ":"ê", "eá":"ế", "eà":"ề", "eå":"ể", "eã":"ễ", "eä":"ệ", "où":"ó", "oà":"ò", "oû":"ỏ", "oõ":"õ", "oï":"ọ", "oâ":"ô", "oá":"ố", "oà":"ồ", "oå":"ổ", "oã":"ỗ", "oä":"ộ", "oê":"ơ", "oé":"ớ", "oè":"ờ", "oú":"ở", "oø":"ỡ", "oë":"ợ", "uù":"ú", "uà":"ù", "uû":"ủ", "uõ":"ũ", "uï":"ụ", "uê":"ư", "ué":"ứ", "uè":"ừ", "uú":"ử", "uø":"ữ", "uë":"ự", "iù":"í", "ià":"ì", "iû":"ỉ", "iõ":"ĩ", "iï":"ị", "yù":"ý", "yà":"ỳ", "yû":"ỷ", "yõ":"ỹ", "yï":"ỵ", "dñ":"đ", "DÑ":"Đ"};
-const tcvn3Map = {"¸":"á", "µ":"à", "¶":"ả", "·":"ã", "¹":"ạ", "©":"â", "Ê":"ấ", "Ç":"ầ", "È":"ẩ", "É":"ẫ", "Ë":"ậ", "¨":"ă", "¾":"ắ", "»":"ằ", "¼":"ẳ", "½":"ẵ", "Æ":"ặ", "Ð":"é", "Ì":"è", "Î":"ẻ", "Ï":"ẽ", "Ñ":"ẹ", "ª":"ê", "Õ":"ế", "Ò":"ề", "Ó":"ể", "Ô":"ễ", "Ö":"ệ", "ã":"ó", "ß":"ò", "á":"ỏ", "â":"õ", "ä":"ọ", "«":"ô", "è":"ố", "å":"ồ", "æ":"ổ", "ç":"ỗ", "é":"ộ", "¬":"ơ", "í":"ớ", "ê":"ờ", "ë":"ở", "ì":"ỡ", "î":"ợ", "ó":"ú", "ï":"ù", "ñ":"ủ", "ò":"ũ", "ô":"ụ", "­":"ư", "ø":"ứ", "õ":"ừ", "ö":"ử", "÷":"ữ", "ù":"ự", "Ý":"í", "×":"ì", "Ø":"ỉ", "Ü":"ĩ", "Þ":"ị", "ý":"ý", "ú":"ỳ", "û":"ỷ", "ü":"ỹ", "þ":"ỵ", "®":"đ"};
-
+// Xóa các Map cũ vì đã gỡ tính năng dịch font.
 function setStatus(message, type = "") {
   const status = document.getElementById("status");
   status.textContent = message;
@@ -84,25 +81,7 @@ async function toolSwapNumbers() {
   } catch(e) { setStatus(e.message, "error"); }
 }
 
-async function toolConvertEncoding(type) {
-  setStatus(`Đang dịch lỗi phông ${type.toUpperCase()}...`, "loading");
-  const map = type === 'vni' ? vniMap : tcvn3Map;
-  try {
-    await Word.run(async (context) => {
-      let range = await getRange(context);
-      for (const [bad, good] of Object.entries(map)) {
-        let results = range.search(bad, { matchCase: true });
-        results.load("items");
-        await context.sync();
-        for (let i = 0; i < results.items.length; i++) {
-          results.items[i].insertText(good, Word.InsertLocation.replace);
-        }
-      }
-      await context.sync();
-    });
-    setStatus(`Đã dịch ${type.toUpperCase()} thành công.`, "success");
-  } catch(e) { setStatus(e.message, "error"); }
-}
+// Hàm dịch font cũ đã bị gỡ.
 
 async function toolChangeCase(toUpper) {
   setStatus("Đang chuyển đổi hoa/thường...", "loading");
@@ -496,18 +475,367 @@ async function toolFindReplace() {
   }
 }
 
+async function callGeminiDuplicate() {
+  const btn = document.getElementById("btnAiDuplicate");
+  const extraPrompt = document.getElementById("aiPrompt").value.trim() || "Không có yêu cầu phụ đặc biệt.";
+  const numExercises = document.getElementById("numExercises").value || "1";
+  const apiKey = document.getElementById("geminiApiKey").value.trim();
+  
+  if (!apiKey) return setStatus("Vui lòng nhập API Key để sử dụng Gemini.", "error");
+
+  localStorage.setItem("geminiApiKey", apiKey);
+  setStatus(`AI đang nhân bản ${numExercises} bài tập...`, "loading");
+  
+  // Khóa nút trong quá trình xử lý
+  btn.disabled = true;
+  const originalBtnText = btn.innerHTML;
+  btn.innerHTML = "⏳ Đang tạo...";
+  btn.style.opacity = "0.7";
+  btn.style.cursor = "not-allowed";
+  
+  try {
+    let sourceText = "";
+    let base64Image = null;
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      range.load("text");
+      
+      // Load hình ảnh trong vùng chọn
+      let pics = range.inlinePictures;
+      pics.load("items");
+      
+      await context.sync();
+      sourceText = range.text;
+
+      if (pics.items.length > 0) {
+        let pic = pics.items[0];
+        let base64 = pic.getBase64ImageSrc();
+        await context.sync();
+        base64Image = base64.value;
+      }
+    });
+
+    if ((!sourceText || sourceText.trim().length === 0) && !base64Image) {
+      throw new Error("Vui lòng bôi đen một bài tập gốc (văn bản hoặc hình ảnh) trong Word để AI làm mẫu.");
+    }
+
+    const finalPrompt = `ĐÓNG VAI: Chuyên gia ra đề thi cấp Quốc gia.
+NHIỆM VỤ: Phân tích bài tập trong ${base64Image ? "bức ảnh" : "đoạn văn bản sau đây"} và tạo ra ${numExercises} bài tập mới TƯƠNG TỰ (về dạng bài, độ khó) nhưng khác số liệu.
+
+YÊU CẦU PHỤ ĐẶC BIỆT TỪ GIÁO VIÊN: ${extraPrompt}
+
+QUAN TRỌNG NHẤT:
+1. **Giữ nguyên dạng toán**: Bài tập mới phải dùng cùng phương pháp giải.
+2. **THAY SỐ LIỆU THÔNG MINH**: Áp dụng triệt để quy tắc **MATH_BEAUTY_RULES** dưới đây. Không random số bừa bãi.
+3. **QUY TẮC CỨNG VỚI HÌNH VẼ**: BỎ QUA HOÀN TOÀN các câu hỏi/bài tập có chứa đồ thị, hình học, hoặc các placeholder liên quan đến hình vẽ. Không tạo bài tập tương tự cho các câu này vì hệ thống không thể chèn ảnh gốc sang bài tập mới. Chỉ nhân bản các bài toán không cần hình vẽ minh hoạ.
+
+**QUY TẮC "SỐ LIỆU ĐẸP & CHÍNH XÁC" (MATH BEAUTY RULES):**
+Để đảm bảo tính chuẩn xác và sự logic trong toán học, khoa học:
+1. **Kết quả cuối cùng**: Ưu tiên số nguyên hoặc phân số tối giản (mẫu số nhỏ < 100).
+2. **Căn thức**: Nếu có căn, số trong căn phải là số chính phương (để khai căn ra số nguyên) hoặc căn thức quen thuộc (căn 2, căn 3).
+3. **Hình học và Logic Không Gian**: 
+    - Các số liệu đo đạc (độ dài, góc) phải tạo thành một hình có thật (VD: Tổng hai hình tam giác > cạnh thứ ba, tam giác vuông phải tuân đúng Pytago 3-4-5, 5-12-13...).
+    - Dữ liệu trong đề thi VÀ sự tương ứng trên hình vẽ (nếu có biểu đồ, hình vẽ AI) phải trùng khớp, logic 100%. Không tự mẫu thuẫn dữ liệu.
+4. **Phương trình**: Nghiệm phải đẹp (số nguyên, phân số đơn giản). Không chấp nhận nghiệm vô tỉ dài dòng trừ khi đề bài yêu cầu làm tròn.
+5. **Thống kê/Xác suất**: Tỉ lệ phần trăm phải chẵn hoặc làm tròn 1-2 chữ số thập phân hợp lý.
+
+**QUY TẮC VỀ ĐỊNH DẠNG TOÁN HỌC (CỰC KỲ QUAN TRỌNG ĐỂ KHÔNG BỊ LỖI MATHTYPE TRONG WORD):**
+Để đảm bảo tính sư phạm và tương thích hoàn toàn với phần mềm MathType khi giáo viên dán vào MS Word, bạn **BẮT BUỘC** phải tuân thủ các quy tắc sau:
+
+1. **Tuyệt đối KHÔNG VIẾT TIẾNG VIỆT CÓ DẤU HOẶC VĂN BẢN TRONG BLOCK LATEX**: 
+    - Việc để chữ tiếng Việt có dấu (như "cùng phụ", "đồng", "điều kiện", "thỏa mãn", "loại", "mà", "nên", "hay") hoặc văn bản thường vào trong cặp dấu $ ... $ hoặc $$ ... $$ (kể cả khi dùng \\text{} hay \\mbox{}) sẽ **GÂY LỖI NGHIÊM TRỌNG DẪN ĐẾN HỎNG FONT MATHTYPE**.
+    - Bạn PHẢI đóng khối hệ thức Toán lại, viết chữ tiếng Việt ở ngoài, rồi mới mở khối Toán khác.
+    - ❌ **Ví dụ SAI 1**: $\\widehat{MBA} (\\text{cùng phụ } \\widehat{ABO}) \\text{ nên } \\widehat{DCB} = \\widehat{MBA}$
+    - ✅ **Ví dụ ĐÚNG 1**: $\\widehat{MBA}$ (cùng phụ $\\widehat{ABO}$) nên $\\widehat{DCB} = \\widehat{MBA}$
+    - ❌ **Ví dụ SAI 2**: $x = 5 \\text{ (thỏa mãn điều kiện)}$
+    - ✅ **Ví dụ ĐÚNG 2**: $x = 5$ (thỏa mãn điều kiện)
+    - ❌ **Ví dụ SAI 3**: $\\Delta ABC \\sim \\Delta DEF (c.g.c)$ hoặc $A B C (g-c-g)$
+    - ✅ **Ví dụ ĐÚNG 3**: $\\Delta ABC \\sim \\Delta DEF$ (c.g.c)
+
+2. **Ký hiệu Tam giác**: CHỈ dùng \\Delta (tam giác to). Ví dụ: $\\Delta ABC$. **TUYỆT ĐỐI KHÔNG** dùng lệnh \\triangle.
+3. **Ký hiệu Góc**: CHỈ dùng \\widehat{ABC} (có mũ ở trên). Ví dụ: $\\widehat{ABC} = 60^\\circ$. **TUYỆT ĐỐI KHÔNG** dùng \\angle ABC.
+4. **Cú pháp chuẩn**: Phải viết thường (\\frac, \\sqrt). TUYỆT ĐỐI KHÔNG viết hoa lệnh (\\FRAC).
+5. **Tam giác bằng nhau & Đồng dạng**: Dùng = cho bằng nhau ($\\Delta ABC = \\Delta A'B'C'$). Dùng \\sim cho đồng dạng. KHÔNG dùng \\cong.
+6. **Độ & Dấu phẩy thập phân**: Đo góc phải có độ (^\\circ). Dấu thập phân của Việt Nam bắt buộc là dấu phẩy , ($3,14$ thay vì $3.14$).
+7. **Song song & Vuông góc**: Dùng \\parallel (hoặc //) và \\perp.
+8. **Hệ phương trình / Hệ điều kiện**: Khi dùng \\begin{cases} ... \\end{cases}, nếu cần ghi chú (thỏa mãn/loại), CHỈ dùng chữ viết tắt tiếng Việt không dấu: (\\text{TM}) hoặc (\\text{L}) để tránh lỗi font MathType. 
+
+---
+**QUY TRÌNH KIỂM DUYỆT CHẤT LƯỢNG 3 LỚP (3-LAYER QA PROTOCOL):**
+Trước khi xuất ra kết quả JSON cuối cùng, bạn **PHẢI** thực hiện quy trình tự kiểm tra và sửa lỗi ngầm (Internal Self-Correction) sau đây:
+
+1. **VÒNG 1: KIỂM TRA SỐ LIỆU & LOGIC KHOA HỌC**
+    - Tự giải lại bài toán/câu hỏi. Kết quả phải chính xác và "đẹp" (số nguyên, phân số đơn giản).
+    - Logic bài dạy phải trơn tru: Hoạt động trước là tiền đề cho hoạt động sau.
+    - Thời lượng phân bổ hợp lý, tổng thời gian phải khớp với quy định.
+
+2. **VÒNG 2: BIÊN TẬP VIÊN TOÁN HỌC & NGÔN NGỮ**
+    - **LaTeX:** Rà soát từng mã, dùng \\widehat{...} cho góc, \\Delta cho tam giác, dấu phẩy , cho số thập phân.
+    - **QUÉT LỖI MATHTYPE (CỰC KỲ QUAN TRỌNG):** BẮT BUỘC rà soát lại toàn bộ công thức. TUYỆT ĐỐI KHÔNG để chữ tiếng Việt có dấu, hoặc các chữ như (c.g.c), chữ viết tắt lọt vào trong khối $ ... $ hoặc $$ ... $$. Hãy kiểm tra xem có bất kỳ lệnh \\text{} chứa tiếng Việt nào không. Nếu có, PHẢI ngắt biểu thức ra ngoài. Ví dụ đúng: $\\widehat{MBA}$ (cùng phụ $\\widehat{ABO}$) nên...
+    - **Ngôn ngữ:** Dùng từ ngữ sư phạm chuẩn mực (Ví dụ: "Yêu cầu HS...", "Hướng dẫn HS...", không dùng văn nói).
+
+3. **VÒNG 3: KỸ THUẬT VIÊN MARKDOWN (QUAN TRỌNG CHO BẢNG)**
+    - **Cấu trúc Bảng:** Kiểm tra kỹ các bảng Markdown. Đảm bảo số lượng cột ở mỗi hàng **BẰNG NHAU** và khớp với tiêu đề.
+    - **Không được thiếu dấu |**: Mọi dòng trong bảng phải bắt đầu và kết thúc bằng |.
+    - Tránh dùng HTML phức tạp trong bảng, chỉ dùng thẻ <br> để xuống dòng.
+
+**CHỈ XUẤT RA KẾT QUẢ ĐÃ QUA 3 VÒNG KIỂM TRA VÀ ĐÃ ĐƯỢC SỬA SẠCH LỖI.**
+---
+${base64Image ? "" : `\n--- ĐỀ BÀI (VĂN BẢN TRÍCH XUẤT TỪ FILE WORD) ---\n${sourceText}`}
+
+OUTPUT JSON:
+- exercises: Mảng các bài tập mới. Mỗi bài gồm:
+    - problemMarkdown: Đề bài (dùng LaTeX chuẩn cho công thức theo quy tắc ở trên).
+    - solutionMarkdown: Lời giải chi tiết (bắt buộc phải giải ra số đẹp).
+`;
+
+    let modelName = "gemini-1.5-pro"; // Buộc dùng 1.5 Pro cho task phức tạp này
+    
+    // Xây dựng parts cho Gemini
+    let parts = [{ text: finalPrompt }];
+    if (base64Image) {
+      let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
+      parts.push({
+        inlineData: {
+          mimeType: mime,
+          data: base64Image.split(",")[1] || base64Image
+        }
+      });
+    }
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: parts }],
+        generationConfig: { responseMimeType: "application/json" }
+      })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI không phản hồi.");
+    
+    let responseText = data.candidates[0].content.parts[0].text;
+    let resultObj;
+    try {
+      let cleanText = responseText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      resultObj = JSON.parse(cleanText);
+    } catch(e) {
+      throw new Error("AI trả về sai định dạng. Vui lòng thử lại!");
+    }
+    
+    if (!resultObj.exercises || !Array.isArray(resultObj.exercises)) {
+      throw new Error("Dữ liệu bài tập trả về bị lỗi cấu trúc.");
+    }
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      
+      let htmlOutput = "";
+      resultObj.exercises.forEach((ex, idx) => {
+        let problemHtml = ex.problemMarkdown.replace(/\n/g, "<br>");
+        let solutionHtml = ex.solutionMarkdown.replace(/\n/g, "<br>");
+        htmlOutput += `
+        <div style="margin-top: 20px; padding: 10px; border: 1px dashed #e11d48;">
+          <h3 style="color: #e11d48;">Bài tập Nhân bản ${idx + 1}:</h3>
+          <p><strong>Đề bài:</strong><br>${problemHtml}</p>
+          <p><strong>Lời giải:</strong><br>${solutionHtml}</p>
+        </div><br>`;
+      });
+
+      // Insert at the end of selection
+      range.insertHtml(htmlOutput, Word.InsertLocation.after);
+      await context.sync();
+    });
+    
+    const summaryDiv = document.getElementById("aiSummary");
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> Đã tạo ${resultObj.exercises.length} bài tập!`;
+    summaryDiv.style.display = "block";
+    summaryDiv.style.borderLeftColor = "var(--success)";
+    summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Đã tạo đề thi thành công!", "success");
+
+  } catch (error) {
+    const summaryDiv = document.getElementById("aiSummary");
+    summaryDiv.innerHTML = `<strong>Lỗi:</strong> ${error.message}`;
+    summaryDiv.style.display = "block";
+    summaryDiv.style.borderLeftColor = "var(--error)";
+    summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Quá trình nhân bản bị lỗi.", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalBtnText;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+  }
+}
+
+async function callGeminiDigitize() {
+  const btn = document.getElementById("btnAiDigitize");
+  const extraPrompt = document.getElementById("aiPrompt").value.trim() || "Không có yêu cầu phụ đặc biệt.";
+  const apiKey = document.getElementById("geminiApiKey").value.trim();
+  
+  if (!apiKey) return setStatus("Vui lòng nhập API Key để sử dụng Gemini.", "error");
+
+  localStorage.setItem("geminiApiKey", apiKey);
+  setStatus("AI đang số hoá ảnh thành văn bản...", "loading");
+  
+  btn.disabled = true;
+  const originalBtnText = btn.innerHTML;
+  btn.innerHTML = "⏳ Đang quét...";
+  btn.style.opacity = "0.7";
+  btn.style.cursor = "not-allowed";
+  
+  try {
+    let base64Image = null;
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      let pics = range.inlinePictures;
+      pics.load("items");
+      await context.sync();
+
+      if (pics.items.length > 0) {
+        let pic = pics.items[0];
+        let base64 = pic.getBase64ImageSrc();
+        await context.sync();
+        base64Image = base64.value;
+      }
+    });
+
+    if (!base64Image) {
+      throw new Error("Vui lòng bấm CHỌN VÀO MỘT BỨC ẢNH trong Word để AI có thể nhìn thấy!");
+    }
+
+    const finalPrompt = `ĐÓNG VAI: Chuyên gia số hóa tài liệu giáo dục.
+NHIỆM VỤ: Phân tích hình ảnh (hoặc PDF file) đề thi và chuyển thể sang định dạng văn bản chính xác tuyệt đối.
+
+YÊU CẦU PHỤ ĐẶC BIỆT TỪ GIÁO VIÊN: ${extraPrompt}
+
+QUY TẮC QUAN TRỌNG:
+1. **Giữ nguyên nội dung**: Không được tự ý sửa đề, trừ khi đó là lỗi chính tả rõ ràng.
+2. **Đầu trang (Header)**: Nếu đây là trang đầu tiên của đề thi, hãy trích xuất thông tin tiêu đề ở góc trái và góc phải.
+3. **Nội dung đề**: Chuyển thành văn bản. Giữ nguyên cấu trúc (Trắc nghiệm/Tự luận). Bắt đầu từ sau phần Header (nếu có).
+4. **Hình ảnh**: Thay thế các hình vẽ/đồ thị bằng cách ghi chú [HÌNH_X] (X là số thứ tự 1, 2...).
+5. **Bảng biểu & Đáp án**: BẮT BUỘC phải giữ nguyên tối đa cấu trúc bảng. Trình bày bằng cấu trúc BẢNG HTML (Dùng <table>, <tr>, <td>). Không dùng bảng Markdown vì Word không tự chuyển đổi được.
+
+**QUY TẮC VỀ ĐỊNH DẠNG TOÁN HỌC (CỰC KỲ QUAN TRỌNG ĐỂ KHÔNG BỊ LỖI MATHTYPE TRONG WORD):**
+Để đảm bảo tính sư phạm và tương thích hoàn toàn với phần mềm MathType khi giáo viên dán vào MS Word, bạn **BẮT BUỘC** phải tuân thủ các quy tắc sau:
+
+1. **Tuyệt đối KHÔNG VIẾT TIẾNG VIỆT CÓ DẤU HOẶC VĂN BẢN TRONG BLOCK LATEX**: 
+    - Việc để chữ tiếng Việt có dấu (như "cùng phụ", "đồng", "điều kiện", "thỏa mãn", "loại", "mà", "nên", "hay") hoặc văn bản thường vào trong cặp dấu $ ... $ hoặc $$ ... $$ (kể cả khi dùng \\text{} hay \\mbox{}) sẽ **GÂY LỖI NGHIÊM TRỌNG DẪN ĐẾN HỎNG FONT MATHTYPE**.
+    - Bạn PHẢI đóng khối hệ thức Toán lại, viết chữ tiếng Việt ở ngoài, rồi mới mở khối Toán khác.
+    - ❌ **Ví dụ SAI 1**: $\\widehat{MBA} (\\text{cùng phụ } \\widehat{ABO}) \\text{ nên } \\widehat{DCB} = \\widehat{MBA}$
+    - ✅ **Ví dụ ĐÚNG 1**: $\\widehat{MBA}$ (cùng phụ $\\widehat{ABO}$) nên $\\widehat{DCB} = \\widehat{MBA}$
+    - ❌ **Ví dụ SAI 2**: $x = 5 \\text{ (thỏa mãn điều kiện)}$
+    - ✅ **Ví dụ ĐÚNG 2**: $x = 5$ (thỏa mãn điều kiện)
+    - ❌ **Ví dụ SAI 3**: $\\Delta ABC \\sim \\Delta DEF (c.g.c)$ hoặc $A B C (g-c-g)$
+    - ✅ **Ví dụ ĐÚNG 3**: $\\Delta ABC \\sim \\Delta DEF$ (c.g.c)
+
+2. **Ký hiệu Tam giác**: CHỈ dùng \\Delta (tam giác to). Ví dụ: $\\Delta ABC$. **TUYỆT ĐỐI KHÔNG** dùng lệnh \\triangle.
+3. **Ký hiệu Góc**: CHỈ dùng \\widehat{ABC} (có mũ ở trên). Ví dụ: $\\widehat{ABC} = 60^\\circ$. **TUYỆT ĐỐI KHÔNG** dùng \\angle ABC.
+4. **Cú pháp chuẩn**: Phải viết thường (\\frac, \\sqrt). TUYỆT ĐỐI KHÔNG viết hoa lệnh (\\FRAC).
+5. **Tam giác bằng nhau & Đồng dạng**: Dùng = cho bằng nhau ($\\Delta ABC = \\Delta A'B'C'$). Dùng \\sim cho đồng dạng. KHÔNG dùng \\cong.
+6. **Độ & Dấu phẩy thập phân**: Đo góc phải có độ (^\\circ). Dấu thập phân của Việt Nam bắt buộc là dấu phẩy , ($3,14$ thay vì $3.14$).
+7. **Song song & Vuông góc**: Dùng \\parallel (hoặc //) và \\perp.
+8. **Hệ phương trình / Hệ điều kiện**: Khi dùng \\begin{cases} ... \\end{cases}, nếu cần ghi chú (thỏa mãn/loại), CHỈ dùng chữ viết tắt tiếng Việt không dấu: (\\text{TM}) hoặc (\\text{L}) để tránh lỗi font MathType. 
+
+---
+**QUY TRÌNH KIỂM DUYỆT CHẤT LƯỢNG 3 LỚP (3-LAYER QA PROTOCOL):**
+Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện quy trình tự kiểm tra và sửa lỗi ngầm (Internal Self-Correction) sau đây:
+
+1. **VÒNG 1: KIỂM TRA SỐ LIỆU & LOGIC KHOA HỌC**
+    - Đảm bảo không bỏ sót bất kỳ dòng nội dung hay câu hỏi nào từ ảnh truyền vào. Nội dung số hóa phải liền mạch, khớp 100% với ảnh.
+2. **VÒNG 2: BIÊN TẬP VIÊN TOÁN HỌC & NGÔN NGỮ**
+    - **LaTeX:** Rà soát từng mã, dùng \\widehat{...} cho góc, \\Delta cho tam giác, dấu phẩy , cho số thập phân.
+    - **QUÉT LỖI MATHTYPE (CỰC KỲ QUAN TRỌNG):** BẮT BUỘC rà soát lại toàn bộ công thức. TUYỆT ĐỐI KHÔNG để chữ tiếng Việt có dấu, hoặc các chữ như (c.g.c), chữ viết tắt lọt vào trong khối $ ... $ hoặc $$ ... $$.
+3. **VÒNG 3: KỸ THUẬT VIÊN MÃ HOÁ (QUAN TRỌNG CHO WORD)**
+    - Đảm bảo trả về VĂN BẢN TRỰC TIẾP.
+    - Dùng thẻ HTML (<h1>, <p>, <br>, <strong>, <table>) để định dạng. Không dùng Markdown block code (\`\`\`). Word không đọc được bảng Markdown! Mọi bảng biểu phải chuyển thành <table> HTML chuẩn.
+
+**BẠN HÃY TRẢ VỀ TOÀN BỘ KẾT QUẢ SỐ HOÁ BẰNG HTML NGAY SAU ĐÂY:**
+`;
+
+    let modelName = "gemini-1.5-pro"; // Image to Text requires PRO for best accuracy
+    let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
+    
+    let parts = [
+      { text: finalPrompt },
+      {
+        inlineData: {
+          mimeType: mime,
+          data: base64Image.split(",")[1] || base64Image
+        }
+      }
+    ];
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: parts }]
+      })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI không thể đọc được ảnh này.");
+    
+    let responseText = data.candidates[0].content.parts[0].text;
+    
+    // Xóa markdown wrappers nếu AI cố tình dùng
+    let cleanText = responseText.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      
+      let htmlOutput = `
+        <div style="margin-top: 10px; margin-bottom: 10px; border: 1px dashed #10b981; padding: 10px;">
+          <h3 style="color: #10b981; text-align: center;">VĂN BẢN ĐÃ SỐ HOÁ</h3>
+          <div>${cleanText.replace(/\n/g, "<br>")}</div>
+        </div><br>`;
+
+      // Insert at the end of selection
+      range.insertHtml(htmlOutput, Word.InsertLocation.after);
+      await context.sync();
+    });
+    
+    const summaryDiv = document.getElementById("aiSummary");
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> Quá trình quét và số hoá ảnh đã hoàn tất.`;
+    summaryDiv.style.display = "block";
+    summaryDiv.style.borderLeftColor = "var(--success)";
+    summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Đã số hoá ảnh thành công!", "success");
+
+  } catch (error) {
+    const summaryDiv = document.getElementById("aiSummary");
+    summaryDiv.innerHTML = `<strong>Lỗi:</strong> ${error.message}`;
+    summaryDiv.style.display = "block";
+    summaryDiv.style.borderLeftColor = "var(--error)";
+    summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Quá trình quét ảnh bị lỗi.", "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalBtnText;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+  }
+}
+
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("btnClean").addEventListener("click", runAutoClean);
     document.getElementById("btnRemoveLinks").addEventListener("click", toolRemoveLinks);
     document.getElementById("btnSwapNumbers").addEventListener("click", toolSwapNumbers);
-    document.getElementById("btnConvertVNI").addEventListener("click", () => toolConvertEncoding('vni'));
-    document.getElementById("btnConvertTCVN3").addEventListener("click", () => toolConvertEncoding('tcvn3'));
     document.getElementById("btnUpperCase").addEventListener("click", () => toolChangeCase(true));
     document.getElementById("btnLowerCase").addEventListener("click", () => toolChangeCase(false));
     document.getElementById("btnTestLines").addEventListener("click", toolAddTestLines);
     document.getElementById("btnFormatMCQ").addEventListener("click", toolFormatMCQ);
     document.getElementById("btnAiWrite").addEventListener("click", callGeminiApi);
+    document.getElementById("btnAiDuplicate").addEventListener("click", callGeminiDuplicate);
+    document.getElementById("btnAiDigitize").addEventListener("click", callGeminiDigitize);
     document.getElementById("btnFindReplace").addEventListener("click", toolFindReplace);
     document.getElementById("geminiApiKey").value = localStorage.getItem("geminiApiKey") || "";
   }

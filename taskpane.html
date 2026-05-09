@@ -20,12 +20,19 @@
     <div class="glass-panel">
       <h2><span class="icon">🤖</span> Trợ lý AI (Soạn thảo & Biên tập)</h2>
       <div class="ai-box">
-        <textarea id="aiPrompt" placeholder="Nhập yêu cầu: Ví dụ 'Viết một đơn xin phép nghỉ ốm do viêm họng...' hoặc bôi đen văn bản và yêu cầu sửa lỗi."></textarea>
-        <div style="display: flex; gap: 8px;">
+        <textarea id="aiPrompt" placeholder="Nhập yêu cầu phụ (nếu có), ví dụ: 'Chỉ giải bài 1', 'Dịch sang tiếng Anh'..."></textarea>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
           <input type="password" id="geminiApiKey" placeholder="Dán Gemini API Key vào đây..." style="flex: 1;" class="custom-input">
-          <button id="btnAiWrite" class="tool-btn" style="background: var(--primary); color: white; border: none; padding: 0 16px;">✨ Gửi AI</button>
         </div>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 11px; color: var(--primary); margin-top: 4px; display: inline-block;">+ Lấy API Key miễn phí tại đây</a>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <button id="btnAiWrite" class="tool-btn" style="flex: 1; background: var(--primary); color: white; border: none; padding: 0 8px;">✨ Xử lý thường</button>
+          <button id="btnAiDigitize" class="tool-btn" style="flex: 1; background: #10b981; color: white; border: none; padding: 0 8px;" title="Bôi đen một bức ảnh rồi bấm nút này">🖼️ Số hoá Ảnh</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btnAiDuplicate" class="tool-btn" style="flex: 1; background: #e11d48; color: white; border: none; padding: 0 8px;" title="Bôi đen một bài tập rồi bấm nút này">📝 Nhân bản Đề</button>
+          <input type="number" id="numExercises" value="1" min="1" max="10" class="custom-input" style="width: 50px; text-align: center; font-weight: bold; color: #e11d48;" title="Số lượng">
+        </div>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 11px; color: var(--primary); margin-top: 8px; display: inline-block;">+ Lấy API Key miễn phí tại đây</a>
         <div id="aiSummary" class="ai-summary" style="display: none;"></div>
       </div>
     </div>
@@ -50,8 +57,6 @@
         </div>
         <button id="btnRemoveLinks" class="tool-btn" title="Xóa toàn bộ gạch chân và màu xanh của Link ẩn">🔗 Xóa Hyperlink</button>
         <button id="btnSwapNumbers" class="tool-btn" title="Đảo ngược phẩy và chấm (1,000.5 -> 1.000,5)">🔢 Đổi Dấu Số</button>
-        <button id="btnConvertVNI" class="tool-btn" title="Dịch ngược lỗi phông chữ VNI sang Unicode">A->A Dịch VNI</button>
-        <button id="btnConvertTCVN3" class="tool-btn" title="Dịch ngược lỗi phông chữ TCVN3 sang Unicode">A->A Dịch TCVN3</button>
         <button id="btnUpperCase" class="tool-btn" title="Viết in hoa toàn bộ">🔠 IN HOA</button>
         <button id="btnLowerCase" class="tool-btn" title="Viết in thường toàn bộ">🔡 in thường</button>
       </div>
