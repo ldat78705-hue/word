@@ -44,6 +44,51 @@ async function getRange(context, allowEmpty = false) {
 }
 
 /* =========================================================
+   XỬ LÝ LATEX & MATHTYPE
+   ========================================================= */
+function cleanLatexForMathType(text) {
+  if (!text) return text;
+  
+  // 1. Chuẩn hóa tag quen thuộc
+  text = text.replace(/\\triangle(?![a-zA-Z])/g, "\\Delta");
+  text = text.replace(/\\angle\s*([A-Z0-9]+)/g, "\\widehat{$1}");
+  text = text.replace(/\\cong/g, "=");
+  
+  // 2. Tìm và bóc tách \text{...}, \mbox{...}, \mathrm{...} ra khỏi khối $...$
+  text = text.replace(/\$([^\$]+)\$/g, function(match, formula) {
+    let newF = formula.replace(/\\(?:text|mbox|mathrm|textbf)\s*\{([^}]+)\}/g, " $$ $1 $$ ");
+    
+    // Tái cấu trúc lại $
+    let rebuilt = `$${newF}$`;
+    
+    // Dọn dẹp khối rỗng sinh ra kiểu $$ và các khoảng trắng
+    rebuilt = rebuilt.replace(/\$\s*\$/g, "");
+    
+    return rebuilt;
+  });
+
+  return text;
+}
+
+async function toolFixLatex() {
+  setStatus("Đang dọn dẹp lỗi LaTeX...", "loading");
+  try {
+    await Word.run(async (context) => {
+      let range = await getRange(context);
+      let oldText = range.text;
+      if (!oldText) return;
+      
+      let newText = cleanLatexForMathType(oldText);
+      if (newText !== oldText) {
+        range.insertText(newText, Word.InsertLocation.replace);
+      }
+      await context.sync();
+    });
+    setStatus("Đã khắc phục lỗi Toán học thành công.", "success");
+  } catch(e) { setStatus(e.message, "error"); }
+}
+
+/* =========================================================
    CÔNG CỤ ĐỘC LẬP
    ========================================================= */
 async function toolRemoveLinks() {
@@ -238,6 +283,8 @@ async function callGeminiApi() {
         // Viết lại toàn bộ hoặc dịch thuật -> Replace toàn bộ range
         let textToUse = resultObj.text || "";
         if (!textToUse && responseText) textToUse = responseText; // fallback an toàn
+        
+        textToUse = cleanLatexForMathType(textToUse);
         
         if (textToUse && textToUse.trim() !== '') {
             let html = textToUse.trim();
@@ -635,8 +682,10 @@ OUTPUT JSON:
       
       let htmlOutput = "";
       resultObj.exercises.forEach((ex, idx) => {
-        let problemHtml = ex.problemMarkdown.replace(/\n/g, "<br>");
-        let solutionHtml = ex.solutionMarkdown.replace(/\n/g, "<br>");
+        let cleanProblem = cleanLatexForMathType(ex.problemMarkdown || "");
+        let cleanSolution = cleanLatexForMathType(ex.solutionMarkdown || "");
+        let problemHtml = cleanProblem.replace(/\n/g, "<br>");
+        let solutionHtml = cleanSolution.replace(/\n/g, "<br>");
         htmlOutput += `
         <div style="margin-top: 20px; padding: 10px; border: 1px dashed #e11d48;">
           <h3 style="color: #e11d48;">Bài tập Nhân bản ${idx + 1}:</h3>
@@ -785,6 +834,9 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
     
     let responseText = data.candidates[0].content.parts[0].text;
     
+    // Áp dụng bộ lọc LaTeX
+    responseText = cleanLatexForMathType(responseText);
+    
     // Xóa markdown wrappers nếu AI cố tình dùng
     let cleanText = responseText.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
 
@@ -833,6 +885,7 @@ Office.onReady((info) => {
     document.getElementById("btnLowerCase").addEventListener("click", () => toolChangeCase(false));
     document.getElementById("btnTestLines").addEventListener("click", toolAddTestLines);
     document.getElementById("btnFormatMCQ").addEventListener("click", toolFormatMCQ);
+    document.getElementById("btnFixLatex").addEventListener("click", toolFixLatex);
     document.getElementById("btnAiWrite").addEventListener("click", callGeminiApi);
     document.getElementById("btnAiDuplicate").addEventListener("click", callGeminiDuplicate);
     document.getElementById("btnAiDigitize").addEventListener("click", callGeminiDigitize);
