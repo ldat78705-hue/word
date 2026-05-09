@@ -54,20 +54,58 @@ function cleanLatexForMathType(text) {
   text = text.replace(/\\angle\s*([A-Z0-9]+)/g, "\\widehat{$1}");
   text = text.replace(/\\cong/g, "=");
   
-  // 2. Tìm và bóc tách \text{...}, \mbox{...}, \mathrm{...} ra khỏi khối $...$
-  text = text.replace(/\$([^\$]+)\$/g, function(match, formula) {
-    let newF = formula.replace(/\\(?:text|mbox|mathrm|textbf)\s*\{([^}]+)\}/g, " $$ $1 $$ ");
+  // 2. Tìm và bóc tách \text{...}, \mbox{...}, \mathrm{...} ra khỏi khối $...$ hoặc $$...$$
+  text = text.replace(/(\${1,2})([^\$]+)\1/g, function(match, d, formula) {
+    // Ép dấu thập phân trong Toán học về dấu phẩy chuẩn Việt Nam (vd: 3.14 -> 3,14)
+    formula = formula.replace(/(\d)\.(\d)/g, "$1,$2");
     
-    // Tái cấu trúc lại $
-    let rebuilt = `$${newF}$`;
+    let newF = formula.replace(/\\(?:text|mbox|mathrm|textbf)\s*\{([^}]+)\}/g, ` ${d} $1 ${d} `);
     
-    // Dọn dẹp khối rỗng sinh ra kiểu $$ và các khoảng trắng
-    rebuilt = rebuilt.replace(/\$\s*\$/g, "");
+    // Tái cấu trúc lại
+    let rebuilt = `${d}${newF}${d}`;
+    
+    // Dọn dẹp khối rỗng sinh ra kiểu $$ $$ hoặc $ $
+    let escapedD = d.replace(/\$/g, "\\$");
+    let emptyBlockRegex = new RegExp(escapedD + "\\s*" + escapedD, "g");
+    rebuilt = rebuilt.replace(emptyBlockRegex, "");
     
     return rebuilt;
   });
 
   return text;
+}
+
+function formatTextToHtml(text) {
+  if (!text) return "";
+  // Xóa khoảng trắng và \n giữa các thẻ HTML để tránh sinh <br> làm vỡ layout bảng
+  let safeText = text.replace(/>\s+</g, "><");
+  // Chuyển đổi Markdown Bold sang HTML
+  safeText = safeText.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  // Thay \n bằng <br> cho các đoạn text thông thường
+  return safeText.replace(/\n/g, "<br>");
+}
+
+async function getGeminiModel(apiKey) {
+  let cachedModel = localStorage.getItem("geminiModelName");
+  if (cachedModel) return cachedModel;
+  
+  let modelName = "gemini-1.5-flash"; // Fallback an toàn
+  try {
+    const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const modelData = await modelRes.json();
+    if (modelData.models) {
+      const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
+                         modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
+                         modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+      if (validModel) {
+        modelName = validModel.name.replace("models/", "");
+        localStorage.setItem("geminiModelName", modelName);
+      }
+    }
+  } catch (e) {
+    console.warn("Lỗi khi dò tìm model, dùng mặc định.", e);
+  }
+  return modelName;
 }
 
 async function toolFixLatex() {
@@ -114,10 +152,21 @@ async function toolSwapNumbers() {
       await context.sync();
       for (let i = 0; i < results.items.length; i++) {
         let txt = results.items[i].text;
-        // Chỉ đổi nếu có chứa phẩy/chấm
         if (txt.includes(',') || txt.includes('.')) {
-          let newTxt = txt.replace(/,/g, 'TEMP').replace(/\./g, ',').replace(/TEMP/g, '.');
-          results.items[i].insertText(newTxt, Word.InsertLocation.replace);
+          let newTxt = txt;
+          let oldTxt;
+          do {
+            oldTxt = newTxt;
+            // Chỉ tráo đổi nếu dấu , hoặc . nằm giữa 2 chữ số (bảo toàn dấu chấm câu ở cuối)
+            newTxt = newTxt.replace(/(\d),(\d)/g, "$1TEMP$2");
+            newTxt = newTxt.replace(/(\d)\.(\d)/g, "$1COMMA$2");
+            newTxt = newTxt.replace(/TEMP/g, ".");
+            newTxt = newTxt.replace(/COMMA/g, ",");
+          } while (newTxt !== oldTxt);
+          
+          if (newTxt !== txt) {
+            results.items[i].insertText(newTxt, Word.InsertLocation.replace);
+          }
         }
       }
       await context.sync();
@@ -174,6 +223,15 @@ async function toolAddTestLines() {
   } catch(e) { setStatus(e.message, "error"); }
 }
 
+function extractJsonFromText(text) {
+  let start = text.indexOf('{');
+  let end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    return text.substring(start, end + 1);
+  }
+  return text;
+}
+
 async function callGeminiApi() {
   const btn = document.getElementById("btnAiWrite");
   const prompt = document.getElementById("aiPrompt").value.trim();
@@ -185,6 +243,13 @@ async function callGeminiApi() {
   localStorage.setItem("geminiApiKey", apiKey);
   setStatus("AI đang suy nghĩ và xử lý...", "loading");
   
+  // Hiển thị trạng thái ngay tại khu vực nút
+  const summaryDiv = document.getElementById("aiSummary");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "var(--primary)";
+  summaryDiv.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang suy nghĩ, vui lòng chờ trong giây lát... ⏳";
+
   // Khóa nút trong quá trình xử lý
   btn.disabled = true;
   const originalBtnText = btn.innerHTML;
@@ -222,22 +287,7 @@ async function callGeminiApi() {
       }
     });
 
-    let modelName = "gemini-1.5-flash"; // Fallback an toàn
-    try {
-      const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const modelData = await modelRes.json();
-      if (modelData.models) {
-        // Ưu tiên flash hoặc pro, tránh các model cũ
-        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
-                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
-                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-        if (validModel) {
-          modelName = validModel.name.replace("models/", "");
-        }
-      }
-    } catch (e) {
-      console.warn("Lỗi khi dò tìm model, dùng mặc định.", e);
-    }
+    let modelName = await getGeminiModel(apiKey);
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
       method: "POST",
@@ -255,7 +305,7 @@ async function callGeminiApi() {
     let responseText = data.candidates[0].content.parts[0].text;
     let resultObj;
     try {
-      let cleanText = responseText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      let cleanText = extractJsonFromText(responseText);
       resultObj = JSON.parse(cleanText);
     } catch(e) {
       resultObj = { text: responseText, summary: "Đã xử lý xong (Không thể trích xuất chi tiết lỗi)." };
@@ -310,6 +360,11 @@ async function callGeminiApi() {
     
     setStatus("Tuyệt vời! AI đã xử lý xong.", "success");
   } catch (e) {
+    const summaryDiv = document.getElementById("aiSummary");
+    summaryDiv.innerHTML = `<strong>Lỗi AI:</strong> ${e.message}`;
+    summaryDiv.style.display = "block";
+    summaryDiv.style.borderLeftColor = "var(--error)";
+    summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
     setStatus("Lỗi AI: " + e.message, "error");
   } finally {
     // Mở khóa nút lại sau khi xong
@@ -376,25 +431,19 @@ async function processAutoClean(context, range, options) {
     for (let i = 0; i < soft.items.length; i++) {
       soft.items[i].insertText(" ", Word.InsertLocation.replace);
     }
+    await context.sync();
     
-    // 4.2. Xoá dòng trống thừa (Thay nhiều Enter bằng 1 Enter)
-    // Dùng vòng lặp tìm ^p^p vì tìm kiếm wildcards ^13 đôi khi không ổn định trên mọi bản Word
-    let iters = 10; 
-    let found = true;
-    while(found && iters > 0) {
-      let blank = range.search("^p^p", { matchWildcards: false });
-      blank.load("items");
-      await context.sync();
-      if (blank.items.length === 0) { 
-        found = false; 
-      } else {
-        for (let i = 0; i < blank.items.length; i++) {
-          blank.items[i].insertText("\r", Word.InsertLocation.replace);
-        }
-        await context.sync();
+    // 4.2. Xoá dòng trống thừa (Dùng vòng lặp paragraphs cho triệt để)
+    let paras = range.paragraphs;
+    paras.load("items, text");
+    await context.sync();
+    // Duyệt ngược từ dưới lên để không bị lỗi index khi xoá
+    for (let i = paras.items.length - 1; i >= 0; i--) {
+      if (paras.items[i].text.trim() === "") {
+        paras.items[i].delete();
       }
-      iters--;
     }
+    await context.sync();
   }
 
   // 5. Khoảng trắng thừa
@@ -403,13 +452,21 @@ async function processAutoClean(context, range, options) {
     spaces.load("items");
     await context.sync();
     for (let i = 0; i < spaces.items.length; i++) spaces.items[i].insertText(" ", Word.InsertLocation.replace);
+    await context.sync();
 
     const puncts = [",", ".", ";", ":", "!", "?"];
+    let punctTasks = [];
     for (const p of puncts) {
       let punctSearch = range.search(" " + p, { matchWildcards: false });
       punctSearch.load("items");
-      await context.sync();
-      for (let i = 0; i < punctSearch.items.length; i++) punctSearch.items[i].insertText(p, Word.InsertLocation.replace);
+      punctTasks.push({ search: punctSearch, replaceText: p });
+    }
+    await context.sync(); // Đồng bộ một lần cho tất cả dấu câu
+    
+    for (let t of punctTasks) {
+      for (let i = 0; i < t.search.items.length; i++) {
+        t.search.items[i].insertText(t.replaceText, Word.InsertLocation.replace);
+      }
     }
   }
 }
@@ -438,30 +495,33 @@ async function toolFormatMCQ() {
       
       const targets = ["B", "C", "D", "b", "c", "d"];
       const suffixes = [".", ")"];
+      const lineBreaks = ["^p", "^l"];
+      const spaceVars = ["", " ", "  "];
       let count = 0;
+      let searchTasks = [];
       
-      for (const t of targets) {
-        for (const s of suffixes) {
-            // Thay thế trường hợp không có dấu cách: "^pB." -> "\t\tB."
-            let findStr1 = `^p${t}${s}`; 
-            let replaceStr1 = `\t\t${t}${s}`;
-            let results1 = range.search(findStr1, { matchCase: true, matchWildcards: false });
-            results1.load("items");
-            await context.sync();
-            for (let i = 0; i < results1.items.length; i++) {
-              results1.items[i].insertText(replaceStr1, Word.InsertLocation.replace);
-              count++;
+      // Đưa toàn bộ các lệnh tìm kiếm vào hàng chờ để chạy đồng thời
+      for (const lb of lineBreaks) {
+        for (const t of targets) {
+          for (const s of suffixes) {
+            for (const sp of spaceVars) {
+              let findStr = `${lb}${sp}${t}${s}`; 
+              let replaceStr = `\t\t${t}${s}`;
+              let results = range.search(findStr, { matchCase: true, matchWildcards: false });
+              results.load("items");
+              searchTasks.push({ results: results, replaceStr: replaceStr });
             }
-            
-            // Thay thế trường hợp có khoảng trắng thừa: "^p B." -> "\t\tB."
-            let findStr2 = `^p ${t}${s}`; 
-            let results2 = range.search(findStr2, { matchCase: true, matchWildcards: false });
-            results2.load("items");
-            await context.sync();
-            for (let i = 0; i < results2.items.length; i++) {
-              results2.items[i].insertText(replaceStr1, Word.InsertLocation.replace);
-              count++;
-            }
+          }
+        }
+      }
+      
+      // Gọi một lệnh sync duy nhất thay vì 72 lần (tối ưu tốc độ x30 lần)
+      await context.sync();
+      
+      for (let task of searchTasks) {
+        for (let i = 0; i < task.results.items.length; i++) {
+          task.results.items[i].insertText(task.replaceStr, Word.InsertLocation.replace);
+          count++;
         }
       }
       
@@ -532,6 +592,13 @@ async function callGeminiDuplicate() {
   localStorage.setItem("geminiApiKey", apiKey);
   setStatus(`AI đang nhân bản ${numExercises} bài tập...`, "loading");
   
+  // Hiển thị trạng thái ngay tại khu vực nút
+  const summaryDiv = document.getElementById("aiSummary");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "#e11d48";
+  summaryDiv.style.backgroundColor = "rgba(225, 29, 72, 0.1)";
+  summaryDiv.innerHTML = `<strong>Đang xử lý:</strong> AI đang nhân bản ${numExercises} bài tập, vui lòng chờ... ⏳`;
+
   // Khóa nút trong quá trình xử lý
   btn.disabled = true;
   const originalBtnText = btn.innerHTML;
@@ -621,10 +688,10 @@ Trước khi xuất ra kết quả JSON cuối cùng, bạn **PHẢI** thực hi
     - **QUÉT LỖI MATHTYPE (CỰC KỲ QUAN TRỌNG):** BẮT BUỘC rà soát lại toàn bộ công thức. TUYỆT ĐỐI KHÔNG để chữ tiếng Việt có dấu, hoặc các chữ như (c.g.c), chữ viết tắt lọt vào trong khối $ ... $ hoặc $$ ... $$. Hãy kiểm tra xem có bất kỳ lệnh \\text{} chứa tiếng Việt nào không. Nếu có, PHẢI ngắt biểu thức ra ngoài. Ví dụ đúng: $\\widehat{MBA}$ (cùng phụ $\\widehat{ABO}$) nên...
     - **Ngôn ngữ:** Dùng từ ngữ sư phạm chuẩn mực (Ví dụ: "Yêu cầu HS...", "Hướng dẫn HS...", không dùng văn nói).
 
-3. **VÒNG 3: KỸ THUẬT VIÊN MARKDOWN (QUAN TRỌNG CHO BẢNG)**
-    - **Cấu trúc Bảng:** Kiểm tra kỹ các bảng Markdown. Đảm bảo số lượng cột ở mỗi hàng **BẰNG NHAU** và khớp với tiêu đề.
-    - **Không được thiếu dấu |**: Mọi dòng trong bảng phải bắt đầu và kết thúc bằng |.
-    - Tránh dùng HTML phức tạp trong bảng, chỉ dùng thẻ <br> để xuống dòng.
+3. **VÒNG 3: KỸ THUẬT VIÊN MÃ HOÁ BẢNG (QUAN TRỌNG)**
+    - **NẾU ĐỀ BÀI CÓ BẢNG BIỂU**, BẠN BẮT BUỘC PHẢI DÙNG THẺ HTML (ví dụ: `<table style="border-collapse: collapse;" border="1">`, `<tr>`, `<td>`) ĐỂ VẼ BẢNG.
+    - **TUYỆT ĐỐI KHÔNG** dùng bảng Markdown (`|---|`) vì Microsoft Word không tự động chuyển đổi được.
+    - Bạn vẫn có thể dùng Markdown để in đậm (`**`), in nghiêng (`*`), nhưng RIÊNG BẢNG BIỂU thì phải dùng HTML. Dùng thẻ `<br>` nếu cần xuống dòng.
 
 **CHỈ XUẤT RA KẾT QUẢ ĐÃ QUA 3 VÒNG KIỂM TRA VÀ ĐÃ ĐƯỢC SỬA SẠCH LỖI.**
 ---
@@ -636,19 +703,7 @@ OUTPUT JSON:
     - solutionMarkdown: Lời giải chi tiết (bắt buộc phải giải ra số đẹp).
 `;
 
-    let modelName = "gemini-1.5-flash"; // Fallback an toàn
-    try {
-      const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const modelData = await modelRes.json();
-      if (modelData.models) {
-        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
-                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
-                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-        if (validModel) {
-          modelName = validModel.name.replace("models/", "");
-        }
-      }
-    } catch (e) {}
+    let modelName = await getGeminiModel(apiKey);
     
     // Xây dựng parts cho Gemini
     let parts = [{ text: finalPrompt }];
@@ -678,10 +733,10 @@ OUTPUT JSON:
     let responseText = data.candidates[0].content.parts[0].text;
     let resultObj;
     try {
-      let cleanText = responseText.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
+      let cleanText = extractJsonFromText(responseText);
       resultObj = JSON.parse(cleanText);
     } catch(e) {
-      throw new Error("AI trả về sai định dạng. Vui lòng thử lại!");
+      throw new Error("AI trả về sai định dạng JSON. Vui lòng thử lại!");
     }
     
     if (!resultObj.exercises || !Array.isArray(resultObj.exercises)) {
@@ -695,14 +750,13 @@ OUTPUT JSON:
       resultObj.exercises.forEach((ex, idx) => {
         let cleanProblem = cleanLatexForMathType(ex.problemMarkdown || "");
         let cleanSolution = cleanLatexForMathType(ex.solutionMarkdown || "");
-        let problemHtml = cleanProblem.replace(/\n/g, "<br>");
-        let solutionHtml = cleanSolution.replace(/\n/g, "<br>");
+        let problemHtml = formatTextToHtml(cleanProblem);
+        let solutionHtml = formatTextToHtml(cleanSolution);
         htmlOutput += `
-        <div style="margin-top: 20px; padding: 10px; border: 1px dashed #e11d48;">
-          <h3 style="color: #e11d48;">Bài tập Nhân bản ${idx + 1}:</h3>
-          <p><strong>Đề bài:</strong><br>${problemHtml}</p>
-          <p><strong>Lời giải:</strong><br>${solutionHtml}</p>
-        </div><br>`;
+        <div style="margin-top: 15px; margin-bottom: 15px; font-family: 'Times New Roman', serif; font-size: 14pt;">
+          <p style="margin-bottom: 6pt;"><strong>Đề bài:</strong><br>${problemHtml}</p>
+          <p style="margin-top: 6pt;"><strong>Lời giải:</strong><br>${solutionHtml}</p>
+        </div>`;
       });
 
       // Insert at the end of selection
@@ -742,6 +796,13 @@ async function callGeminiDigitize() {
   localStorage.setItem("geminiApiKey", apiKey);
   setStatus("AI đang số hoá ảnh thành văn bản...", "loading");
   
+  // Hiển thị trạng thái ngay tại khu vực nút
+  const summaryDiv = document.getElementById("aiSummary");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "#10b981";
+  summaryDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang quét và số hoá ảnh, vui lòng chờ... ⏳";
+
   btn.disabled = true;
   const originalBtnText = btn.innerHTML;
   btn.innerHTML = "⏳ Đang quét...";
@@ -818,19 +879,7 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
 **BẠN HÃY TRẢ VỀ TOÀN BỘ KẾT QUẢ SỐ HOÁ BẰNG HTML NGAY SAU ĐÂY:**
 `;
 
-    let modelName = "gemini-1.5-flash"; // Fallback an toàn
-    try {
-      const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-      const modelData = await modelRes.json();
-      if (modelData.models) {
-        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
-                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
-                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
-        if (validModel) {
-          modelName = validModel.name.replace("models/", "");
-        }
-      }
-    } catch (e) {}
+    let modelName = await getGeminiModel(apiKey);
     let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
     
     let parts = [
@@ -861,15 +910,16 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
     responseText = cleanLatexForMathType(responseText);
     
     // Xóa markdown wrappers nếu AI cố tình dùng
-    let cleanText = responseText.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+    let cleanText = responseText.replace(/```html/gi, '').replace(/```/g, '').trim();
+    cleanText = formatTextToHtml(cleanText);
 
     await Word.run(async (context) => {
       let range = context.document.getSelection();
       
       let htmlOutput = `
-        <div style="margin-top: 10px; margin-bottom: 10px; border: 1px dashed #10b981; padding: 10px;">
-          <h3 style="color: #10b981; text-align: center;">VĂN BẢN ĐÃ SỐ HOÁ</h3>
-          <div>${cleanText.replace(/\n/g, "<br>")}</div>
+        <div style="margin-top: 10px; margin-bottom: 10px; border: 1px dashed #10b981; padding: 10px; font-family: 'Times New Roman', serif; font-size: 14pt;">
+          <h3 style="color: #10b981; text-align: center; font-size: 16pt;">VĂN BẢN ĐÃ SỐ HOÁ</h3>
+          <div>${cleanText}</div>
         </div><br>`;
 
       // Insert at the end of selection
