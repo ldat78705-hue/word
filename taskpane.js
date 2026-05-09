@@ -949,6 +949,126 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
   }
 }
 
+async function toolLatexToWord() {
+  const btn = document.getElementById("btnLatexToWord");
+  const apiKey = document.getElementById("geminiApiKey").value.trim();
+  if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
+
+  setStatus("Đang chuyển đổi LaTeX sang Word Equation...", "loading");
+  const summaryDiv = document.getElementById("mathSummary");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "var(--primary)";
+  summaryDiv.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang dịch mã LaTeX sang MathML, vui lòng chờ... ⏳";
+
+  btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
+
+  try {
+    let sourceText = "";
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      range.load("text");
+      await context.sync();
+      sourceText = range.text;
+    });
+
+    if (!sourceText || sourceText.trim().length === 0) throw new Error("Vui lòng bôi đen văn bản chứa mã LaTeX.");
+
+    const prompt = `Convert all LaTeX math expressions in the following text into MathML format. 
+You must output the exact same text, but replace every LaTeX formula (like $...$ or $$...$$) with its corresponding <math xmlns="http://www.w3.org/1998/Math/MathML">...</math> tag.
+Return ONLY the final HTML string. Do not include markdown code blocks, do not explain.
+Text:
+${sourceText}`;
+
+    let modelName = await getGeminiModel(apiKey);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      range.insertHtml(cleanText, Word.InsertLocation.replace);
+      await context.sync();
+    });
+
+    summaryDiv.innerHTML = "<strong>Thành công:</strong> Đã chuyển mã LaTeX sang Word Equation!";
+    summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Chuyển đổi hoàn tất!", "success");
+  } catch (error) {
+    summaryDiv.innerHTML = "<strong>Lỗi:</strong> " + error.message;
+    summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Lỗi chuyển đổi.", "error");
+  } finally {
+    btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+  }
+}
+
+async function toolWordToLatex() {
+  const btn = document.getElementById("btnWordToLatex");
+  const apiKey = document.getElementById("geminiApiKey").value.trim();
+  if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
+
+  setStatus("Đang dịch công thức Word sang LaTeX...", "loading");
+  const summaryDiv = document.getElementById("mathSummary");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "#10b981";
+  summaryDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang phân tích OOXML để chuyển sang LaTeX... ⏳";
+
+  btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
+
+  try {
+    let sourceHtml = "";
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      let html = range.getHtml();
+      await context.sync();
+      sourceHtml = html.value;
+    });
+
+    if (!sourceHtml) throw new Error("Vui lòng bôi đen đoạn văn bản chứa công thức.");
+
+    const prompt = `Extract and convert all MathML/OMML equations from the following HTML into LaTeX format.
+You must output the plain text, replacing every math equation with its LaTeX equivalent wrapped in $...$.
+Return ONLY the final plain string. Do not use markdown blocks.
+HTML:
+${sourceHtml}`;
+
+    let modelName = await getGeminiModel(apiKey);
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    });
+    
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    
+    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+
+    await Word.run(async (context) => {
+      let range = context.document.getSelection();
+      range.insertText(cleanText, Word.InsertLocation.replace);
+      await context.sync();
+    });
+
+    summaryDiv.innerHTML = "<strong>Thành công:</strong> Đã chuyển công thức thành mã LaTeX!";
+    summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Chuyển đổi hoàn tất!", "success");
+  } catch (error) {
+    summaryDiv.innerHTML = "<strong>Lỗi:</strong> " + error.message;
+    summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Lỗi chuyển đổi.", "error");
+  } finally {
+    btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+  }
+}
+
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("btnClean").addEventListener("click", runAutoClean);
@@ -963,6 +1083,8 @@ Office.onReady((info) => {
     document.getElementById("btnAiDuplicate").addEventListener("click", callGeminiDuplicate);
     document.getElementById("btnAiDigitize").addEventListener("click", callGeminiDigitize);
     document.getElementById("btnFindReplace").addEventListener("click", toolFindReplace);
+    document.getElementById("btnLatexToWord").addEventListener("click", toolLatexToWord);
+    document.getElementById("btnWordToLatex").addEventListener("click", toolWordToLatex);
     document.getElementById("geminiApiKey").value = localStorage.getItem("geminiApiKey") || "";
   }
 });

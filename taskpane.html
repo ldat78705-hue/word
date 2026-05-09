@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Word Cleaner Pro</title>
+  <title>Tiện Ích</title>
   <link rel="stylesheet" href="taskpane.css" />
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -61,6 +61,16 @@
         <button id="btnLowerCase" class="tool-btn" title="Viết in thường toàn bộ">🔡 in thường</button>
         <button id="btnFixLatex" class="tool-btn" title="Đẩy tiếng Việt ra khỏi $...$ để chống lỗi MathType" style="grid-column: span 2; background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;">🛠️ Sửa Lỗi LaTeX (MathType)</button>
       </div>
+    </div>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🧮</span> Chuyển Đổi Toán Học</h2>
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">(Sử dụng Gemini AI để phân tích và dịch công thức)</div>
+      <div class="tool-grid" style="grid-template-columns: 1fr 1fr;">
+        <button id="btnLatexToWord" class="tool-btn" style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary);" title="Bôi đen văn bản chứa mã $...$ hoặc $$...$$">LaTeX ➡️ Word Equation</button>
+        <button id="btnWordToLatex" class="tool-btn" style="background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;" title="Bôi đen công thức của Word">Word Equation ➡️ LaTeX</button>
+      </div>
+      <div id="mathSummary" class="ai-summary" style="display: none; margin-top: 8px;"></div>
     </div>
 
     <div class="glass-panel" style="border-color: var(--primary);">
