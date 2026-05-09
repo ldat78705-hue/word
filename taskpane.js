@@ -169,8 +169,24 @@ async function callGeminiApi() {
   btn.style.cursor = "not-allowed";
   
   try {
+    const mathRules = `
+[CÁC QUY TẮC TOÁN HỌC & GIÁO DỤC BẮT BUỘC NẾU CÓ]
+1. QUY TẮC SỐ LIỆU ĐẸP (MATH BEAUTY RULES):
+- Kết quả & Phương trình: Ưu tiên số nguyên, phân số tối giản (mẫu <100), hạn chế vô tỉ dài.
+- Căn thức: Ưu tiên số chính phương hoặc các căn quen thuộc.
+- Hình học & Logic: Số liệu phải tạo thành hình hợp logic (Pytago 3-4-5, tổng 2 cạnh...).
+- Thống kê: Số liệu chẵn hoặc làm tròn 1-2 chữ số thập phân hợp lý.
+2. ĐỊNH DẠNG MATHTYPE MS WORD (VIETNAMESE MATH RULES):
+- TUYỆT ĐỐI không chèn Tiếng Việt có dấu vào khối LaTeX ($...$). Các từ như (thỏa mãn) phải để ngoài $$.
+- Ký hiệu: Tam giác dùng \\Delta, Góc dùng \\widehat{ABC}, Đồng dạng dùng \\sim, Bằng nhau dùng = (CẤM dùng \\cong, \\angle, \\triangle).
+- Phép nhân dùng \\cdot, Số thập phân dùng phẩy (,).
+- Đo góc dùng ^\\circ. Song song // hoặc \\parallel, vuông góc \\perp.
+- Nếu phát hiện chữ lỗi font TCVN3/VNI, hãy tự động dịch sang Unicode chuẩn.
+- Nếu cần kẻ bảng, HÃY DÙNG MÃ HTML (<table>, <tr>, <td> với style viền đen) để Word có thể hiển thị bảng trực tiếp!
+`;
+
     let isEditing = false;
-    let finalPrompt = `Yêu cầu của người dùng: ${prompt}\n\nBạn BẮT BUỘC phải trả về kết quả dưới dạng JSON (không có markdown code block bao quanh) với đúng 2 trường sau:\n- "summary": Một câu ngắn thông báo kết quả. Nếu viết mới thì tóm tắt.\n- "text": ĐOẠN VĂN BẢN ĐÃ XỬ LÝ HOÀN CHỈNH (giữ nguyên các định dạng bằng Markdown nếu có) để dán trực tiếp vào file Word.`;
+    let finalPrompt = `Yêu cầu của người dùng: ${prompt}\n\n${mathRules}\n\nBạn BẮT BUỘC phải trả về kết quả dưới dạng JSON (không có markdown code block bao quanh) với đúng 2 trường sau:\n- "summary": Một câu ngắn thông báo kết quả. Nếu viết mới thì tóm tắt.\n- "text": ĐOẠN VĂN BẢN ĐÃ XỬ LÝ HOÀN CHỈNH. ĐỂ TRÌNH BÀY ĐẸP VÀ HỖ TRỢ KẺ BẢNG, VUI LÒNG ĐỊNH DẠNG TRƯỜNG TEXT BẰNG HTML (dùng <p>, <strong>, <em>, <table>, <ul>, <li>...).`;
     
     await Word.run(async (context) => {
       let range = context.document.getSelection();
@@ -178,7 +194,7 @@ async function callGeminiApi() {
       await context.sync();
       if (range.text && range.text.trim().length > 0) {
         isEditing = true;
-        finalPrompt = `Bạn là một biên tập viên chuyên nghiệp. Dưới đây là văn bản đang chọn:\n"""\n${range.text}\n"""\n\nYêu cầu: ${prompt}\n\nĐỂ GIỮ NGUYÊN ĐỊNH DẠNG GỐC CỦA VĂN BẢN (màu sắc, in đậm...), đối với tác vụ sửa lỗi chính tả, thay từ, tìm lỗi, bạn KHÔNG ĐƯỢC viết lại toàn bộ mà CHỈ LIỆT KÊ các cụm từ ngắn cần thay thế.\nCHỈ KHI yêu cầu là dịch thuật hoặc viết lại hoàn toàn mới dùng trường "text".\nBẠN BẮT BUỘC TRẢ VỀ JSON SAU:\n{\n  "summary": "Tóm tắt số lỗi đã sửa...",\n  "text": "Văn bản mới hoàn toàn (CHỈ ĐIỀN NẾU DỊCH THUẬT/VIẾT LẠI TOÀN BỘ, ngược lại để chuỗi rỗng '')",\n  "edits": [\n    {"old": "từ bị lỗi trong gốc", "new": "từ đã sửa đúng"}\n  ]\n}\nLưu ý: Trường "old" copy chính xác 100% từ văn bản gốc (tối đa 100 ký tự) để Word tìm kiếm và thay thế inline.`;
+        finalPrompt = `Bạn là một biên tập viên chuyên nghiệp. Dưới đây là văn bản đang chọn:\n"""\n${range.text}\n"""\n\nYêu cầu: ${prompt}\n\n${mathRules}\n\nĐỂ GIỮ NGUYÊN ĐỊNH DẠNG GỐC CỦA VĂN BẢN, đối với tác vụ sửa lỗi chính tả, thay từ, KHÔNG ĐƯỢC viết lại toàn bộ mà CHỈ LIỆT KÊ các cụm từ ngắn cần thay thế.\nCHỈ KHI yêu cầu là dịch thuật, định dạng bảng, hoặc viết lại hoàn toàn mới dùng trường "text" (phải định dạng bằng mã HTML).\nBẠN BẮT BUỘC TRẢ VỀ JSON SAU:\n{\n  "summary": "Tóm tắt...",\n  "text": "Văn bản mới (dùng HTML). Để rỗng nếu chỉ sửa lỗi.",\n  "edits": [\n    {"old": "từ lỗi gốc", "new": "từ đã sửa"}\n  ]\n}`;
       }
     });
 
@@ -245,17 +261,19 @@ async function callGeminiApi() {
         if (!textToUse && responseText) textToUse = responseText; // fallback an toàn
         
         if (textToUse && textToUse.trim() !== '') {
-            let html = textToUse.trim()
-              .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") // In đậm
-              .replace(/\*(.*?)\*/g, "<em>$1</em>") // In nghiêng
-              .replace(/^### (.*$)/gim, "<strong>$1</strong>")
-              .replace(/^## (.*$)/gim, "<strong style='font-size:15pt;'>$1</strong>")
-              .replace(/^# (.*$)/gim, "<strong style='font-size:16pt;'>$1</strong>")
-              .split(/\n{1,}/)
-              .map(p => p.trim())
-              .filter(p => p !== '')
-              .map(p => `<p style="margin-top: 6pt; margin-bottom: 6pt; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.15;">${p}</p>`)
-              .join('');
+            let html = textToUse.trim();
+            if (!html.includes('<p>') && !html.includes('<table>') && !html.includes('<ul>')) {
+              html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                .replace(/^### (.*$)/gim, "<strong>$1</strong>")
+                .replace(/^## (.*$)/gim, "<strong style='font-size:15pt;'>$1</strong>")
+                .replace(/^# (.*$)/gim, "<strong style='font-size:16pt;'>$1</strong>")
+                .split(/\n{1,}/)
+                .map(p => p.trim())
+                .filter(p => p !== '')
+                .map(p => `<p style="margin-top: 6pt; margin-bottom: 6pt; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.15;">${p}</p>`)
+                .join('');
+            }
             range.insertHtml(html, Word.InsertLocation.replace);
         }
       }

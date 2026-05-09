@@ -1,14 +1,11 @@
 @echo off
-title Cai dat Word Cleaner Pro (Ban Online)
+title Cai dat Word Cleaner Pro (Ban Online Vercel)
 echo ====================================================
 echo      CAI DAT WORD CLEANER PRO (VERCEL / ONLINE)
 echo ====================================================
 cd /d "%~dp0"
 
-echo.
-echo [*] Dang dang ky ung dung vao Microsoft Word...
-
-powershell -Command "$wefPath = Join-Path $env:LOCALAPPDATA 'Microsoft\Office\16.0\Wef\Developer'; if (!(Test-Path $wefPath)) { New-Item -ItemType Directory -Path $wefPath -Force | Out-Null }; Copy-Item -Path '.\manifest.xml' -Destination (Join-Path $wefPath 'WordCleanerVN.xml') -Force; Write-Host '=> Da cai dat xong!'"
+powershell -ExecutionPolicy Bypass -File ".\CaiDat.ps1"
 
 echo.
 echo ====================================================
