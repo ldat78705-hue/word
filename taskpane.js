@@ -222,16 +222,15 @@ async function callGeminiApi() {
       }
     });
 
-    let modelName = "gemini-1.5-flash";
+    let modelName = "gemini-1.5-flash"; // Fallback an toàn
     try {
       const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
       const modelData = await modelRes.json();
       if (modelData.models) {
-        const validModel = modelData.models.find(m => 
-          m.supportedGenerationMethods && 
-          m.supportedGenerationMethods.includes("generateContent") &&
-          m.name.includes("gemini")
-        );
+        // Ưu tiên flash hoặc pro, tránh các model cũ
+        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
+                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
+                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
         if (validModel) {
           modelName = validModel.name.replace("models/", "");
         }
@@ -637,7 +636,19 @@ OUTPUT JSON:
     - solutionMarkdown: Lời giải chi tiết (bắt buộc phải giải ra số đẹp).
 `;
 
-    let modelName = "gemini-1.5-pro"; // Buộc dùng 1.5 Pro cho task phức tạp này
+    let modelName = "gemini-1.5-flash"; // Fallback an toàn
+    try {
+      const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const modelData = await modelRes.json();
+      if (modelData.models) {
+        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
+                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
+                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+        if (validModel) {
+          modelName = validModel.name.replace("models/", "");
+        }
+      }
+    } catch (e) {}
     
     // Xây dựng parts cho Gemini
     let parts = [{ text: finalPrompt }];
@@ -807,7 +818,19 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
 **BẠN HÃY TRẢ VỀ TOÀN BỘ KẾT QUẢ SỐ HOÁ BẰNG HTML NGAY SAU ĐÂY:**
 `;
 
-    let modelName = "gemini-1.5-pro"; // Image to Text requires PRO for best accuracy
+    let modelName = "gemini-1.5-flash"; // Fallback an toàn
+    try {
+      const modelRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+      const modelData = await modelRes.json();
+      if (modelData.models) {
+        const validModel = modelData.models.find(m => m.name.includes("gemini-1.5-flash")) || 
+                           modelData.models.find(m => m.name.includes("gemini-1.5-pro")) ||
+                           modelData.models.find(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+        if (validModel) {
+          modelName = validModel.name.replace("models/", "");
+        }
+      }
+    } catch (e) {}
     let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
     
     let parts = [
