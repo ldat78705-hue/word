@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Word Cleaner Pro</title>
+  <link rel="stylesheet" href="taskpane.css" />
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-background"></div>
+  <main class="container">
+    <header>
+      <a href="https://thaydat.edu.vn" target="_blank" class="brand-link">thaydat.edu.vn</a>
+      <h1>Word Cleaner <span class="badge">PRO</span></h1>
+      <p class="subtitle">Khắc phục triệt để lỗi khi copy văn bản</p>
+    </header>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🤖</span> Trợ lý AI (Soạn thảo & Biên tập)</h2>
+      <div class="ai-box">
+        <textarea id="aiPrompt" placeholder="Nhập yêu cầu: Ví dụ 'Viết một đơn xin phép nghỉ ốm do viêm họng...' hoặc bôi đen văn bản và yêu cầu sửa lỗi."></textarea>
+        <div style="display: flex; gap: 8px;">
+          <input type="password" id="geminiApiKey" placeholder="Dán Gemini API Key vào đây..." style="flex: 1;" class="custom-input">
+          <button id="btnAiWrite" class="tool-btn" style="background: var(--primary); color: white; border: none; padding: 0 16px;">✨ Gửi AI</button>
+        </div>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 11px; color: var(--primary); margin-top: 4px; display: inline-block;">+ Lấy API Key miễn phí tại đây</a>
+        <div id="aiSummary" class="ai-summary" style="display: none;"></div>
+      </div>
+    </div>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🔍</span> Tìm & Thay Thế (Thủ công)</h2>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="text" id="findText" placeholder="Từ cần tìm..." class="custom-input">
+        <input type="text" id="replaceText" placeholder="Thay bằng..." class="custom-input">
+        <button id="btnFindReplace" class="tool-btn" style="width: 100%; justify-content: center; padding: 10px 0;">🔄 Thay thế tất cả</button>
+        <div id="findReplaceSummary" class="ai-summary" style="display: none; margin-top: 4px; border-left-color: var(--primary);"></div>
+      </div>
+    </div>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🧰</span> Tiện ích Nhanh</h2>
+      <div class="tool-grid">
+        <button id="btnFormatMCQ" class="tool-btn" title="Dồn 4 đáp án trắc nghiệm ngắn A, B, C, D về cùng 1 dòng ngang" style="grid-column: span 2; border-color: var(--primary); background: rgba(99, 102, 241, 0.05);">🔠 Dồn Trắc Nghiệm</button>
+        <div style="grid-column: span 2; display: flex; gap: 8px;">
+          <button id="btnTestLines" class="tool-btn" style="flex: 1;" title="Tự động kẻ dòng chấm (.) để làm bài tập">📝 Kẻ Dòng Bài Tập</button>
+          <input type="number" id="numTestLines" value="3" min="1" max="50" class="custom-input" style="width: 60px; text-align: center; color: var(--primary); font-weight: 600; padding: 4px;" title="Số dòng kẻ">
+        </div>
+        <button id="btnRemoveLinks" class="tool-btn" title="Xóa toàn bộ gạch chân và màu xanh của Link ẩn">🔗 Xóa Hyperlink</button>
+        <button id="btnSwapNumbers" class="tool-btn" title="Đảo ngược phẩy và chấm (1,000.5 -> 1.000,5)">🔢 Đổi Dấu Số</button>
+        <button id="btnConvertVNI" class="tool-btn" title="Dịch ngược lỗi phông chữ VNI sang Unicode">A->A Dịch VNI</button>
+        <button id="btnConvertTCVN3" class="tool-btn" title="Dịch ngược lỗi phông chữ TCVN3 sang Unicode">A->A Dịch TCVN3</button>
+        <button id="btnUpperCase" class="tool-btn" title="Viết in hoa toàn bộ">🔠 IN HOA</button>
+        <button id="btnLowerCase" class="tool-btn" title="Viết in thường toàn bộ">🔡 in thường</button>
+      </div>
+    </div>
+
+    <div class="glass-panel" style="border-color: var(--primary);">
+      <h2><span class="icon">🚀</span> Dọn Dẹp Tự Động</h2>
+      
+      <details style="margin-bottom: 16px;">
+        <summary style="font-weight: 600; cursor: pointer; padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; font-size: 14px; color: var(--primary);">
+          ⚙️ Cấu hình tuỳ chọn dọn dẹp (Nhấn để mở rộng)
+        </summary>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Xoá khoảng trắng thừa</strong>
+              <span>Xoá dấu cách thừa và chỉnh dấu câu</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optSpaces" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Gom dòng trống & Ngắt dòng</strong>
+              <span>Xoá dòng trống, sửa Shift+Enter và lỗi PDF</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optBlankLines" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Xoá màu nền chữ</strong>
+              <span>Loại bỏ khối màu nền xám/xanh phía sau chữ</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optClearBg" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Đồng bộ Font chuẩn</strong>
+              <span>Đưa toàn bộ về Times New Roman, cỡ 14</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optStandardFont" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Thu gọn bảng & Kẻ viền</strong>
+              <span>Căn bảng Excel không bị tràn và kẻ lưới</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optTableFix" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+          <label class="toggle-option" style="margin-bottom: 0;">
+            <div class="toggle-text">
+              <strong>Cố định Hình ảnh</strong>
+              <span>Đưa ảnh về In Line để không nhảy lung tung</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="optImageFix" checked />
+              <span class="slider"></span>
+            </div>
+          </label>
+        </div>
+      </details>
+
+      <div class="radio-group" style="flex-direction: row; justify-content: space-between; margin-bottom: 16px; padding: 0 8px;">
+        <label class="radio-option">
+          <input type="radio" name="scope" value="selection" checked />
+          <span class="radio-custom"></span>
+          Đoạn bôi đen
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="scope" value="document" />
+          <span class="radio-custom"></span>
+          Toàn bộ tài liệu
+        </label>
+      </div>
+
+      <div class="action-area" style="margin-top: 16px;">
+        <button id="btnClean" class="primary-btn" style="box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);">
+          <span class="btn-text">Bắt đầu Dọn dẹp</span>
+          <span class="btn-icon">✨</span>
+        </button>
+      </div>
+      <div id="status" class="status-msg"></div>
+    </div>
+  </main>
+  <style>
+    .custom-input {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .custom-input:focus {
+      border-color: var(--primary);
+    }
+    details summary {
+      outline: none;
+    }
+    details summary::-webkit-details-marker {
+      display: none;
+    }
+  </style>
+  <script src="taskpane.js"></script>
+</body>
+</html>
