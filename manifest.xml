@@ -4,18 +4,15 @@
            xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
-  <Id>c0079ced-e355-4102-938b-e03b7baa45df</Id>
-  <Version>1.0.0.0</Version>
+  <Id>e3d99f22-f555-43c7-a92c-09b55e22ccdd</Id>
+  <Version>1.0.1.2</Version>
   <ProviderName>AddonWord Team</ProviderName>
-  <DefaultLocale>vi-VN</DefaultLocale>
-  <DisplayName DefaultValue="Word Cleaner VN"/>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Tiện ích"/>
   <Description DefaultValue="Lam sach van ban copy tu nguon khac trong Word."/>
-  <IconUrl DefaultValue="https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/item-types/16/docx.png"/>
-  <HighResolutionIconUrl DefaultValue="https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/item-types/20/docx.png"/>
+  <IconUrl DefaultValue="https://word-td.vercel.app/icon.png"/>
+  <HighResolutionIconUrl DefaultValue="https://word-td.vercel.app/icon.png"/>
   <SupportUrl DefaultValue="https://word-td.vercel.app/support.html"/>
-  <AppDomains>
-    <AppDomain>https://word-td.vercel.app</AppDomain>
-  </AppDomains>
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
@@ -68,18 +65,18 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/item-types/16/docx.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/item-types/20/docx.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://res.cdn.office.net/files/fabric-cdn-prod_20221201.001/assets/item-types/48/docx.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://word-td.vercel.app/icon.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://word-td.vercel.app/icon.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://word-td.vercel.app/icon.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://word-td.vercel.app/support.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://word-td.vercel.app/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Word Cleaner VN"/>
-        <bt:String id="Cleaner.GroupLabel" DefaultValue="Word Cleaner"/>
-        <bt:String id="Cleaner.ButtonLabel" DefaultValue="Mo Word Cleaner"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Tiện ích"/>
+        <bt:String id="Cleaner.GroupLabel" DefaultValue="Tiện ích"/>
+        <bt:String id="Cleaner.ButtonLabel" DefaultValue="Mở Tiện ích"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="GetStarted.Description" DefaultValue="Mo bang cong cu de sua loi dinh dang khi copy van ban."/>

@@ -18,16 +18,10 @@ Remove-Item -Path "HKCU:\Software\Microsoft\Office\16.0\WEF\Developer" -Recurse 
 Remove-Item -Path "HKCU:\Software\Microsoft\Office\16.0\WEF\Cache" -Recurse -Force | Out-Null
 Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\Office\16.0\Wef" -Recurse -Force | Out-Null
 
-# Cai dat qua Developer (Sideloading) cho cac may ho tro 1-click
+# Cai dat qua Developer (Sideloading) - Day la cach duy nhat hien thi nut tren Ribbon
 $registryPath = "HKCU:\Software\Microsoft\Office\16.0\WEF\Developer"
 New-Item -Path $registryPath -Force | Out-Null
-$guid = "c0079ced-e355-4102-938b-e03b7baa45df"
+$guid = "e3d99f22-f555-43c7-a92c-09b55e22ccdd"
 Set-ItemProperty -Path $registryPath -Name $guid -Value $manifestTarget
-
-# Cai dat qua Trusted Catalogs cho cac may bao mat cao (nhu Office LTSC)
-$catalogPath = "HKCU:\Software\Microsoft\Office\16.0\WEF\TrustedCatalogs\WordCleaner"
-New-Item -Path $catalogPath -Force | Out-Null
-Set-ItemProperty -Path $catalogPath -Name "Id" -Value $targetDir
-Set-ItemProperty -Path $catalogPath -Name "Flags" -Value 1
 
 Write-Host "=> DA CAI DAT XONG TEP HE THONG!"
