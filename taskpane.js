@@ -709,9 +709,9 @@ Trước khi xuất ra kết quả JSON cuối cùng, bạn **PHẢI** thực hi
     - **Ngôn ngữ:** Dùng từ ngữ sư phạm chuẩn mực (Ví dụ: "Yêu cầu HS...", "Hướng dẫn HS...", không dùng văn nói).
 
 3. **VÒNG 3: KỸ THUẬT VIÊN MÃ HOÁ BẢNG (QUAN TRỌNG)**
-    - **NẾU ĐỀ BÀI CÓ BẢNG BIỂU**, BẠN BẮT BUỘC PHẢI DÙNG THẺ HTML (ví dụ: `<table style="border-collapse: collapse;" border="1">`, `<tr>`, `<td>`) ĐỂ VẼ BẢNG.
-    - **TUYỆT ĐỐI KHÔNG** dùng bảng Markdown (`|---|`) vì Microsoft Word không tự động chuyển đổi được.
-    - Bạn vẫn có thể dùng Markdown để in đậm (`**`), in nghiêng (`*`), nhưng RIÊNG BẢNG BIỂU thì phải dùng HTML. Dùng thẻ `<br>` nếu cần xuống dòng.
+    - **NẾU ĐỀ BÀI CÓ BẢNG BIỂU**, BẠN BẮT BUỘC PHẢI DÙNG THẺ HTML (ví dụ: \`<table style="border-collapse: collapse;" border="1">\`, \`<tr>\`, \`<td>\`) ĐỂ VẼ BẢNG.
+    - **TUYỆT ĐỐI KHÔNG** dùng bảng Markdown (\`|---|\`) vì Microsoft Word không tự động chuyển đổi được.
+    - Bạn vẫn có thể dùng Markdown để in đậm (\`**\`), in nghiêng (\`*\`), nhưng RIÊNG BẢNG BIỂU thì phải dùng HTML. Dùng thẻ \`<br>\` nếu cần xuống dòng.
 
 **CHỈ XUẤT RA KẾT QUẢ ĐÃ QUA 3 VÒNG KIỂM TRA VÀ ĐÃ ĐƯỢC SỬA SẠCH LỖI.**
 ---
