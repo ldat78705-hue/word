@@ -1107,6 +1107,42 @@ ${sourceHtml}`;
   }
 }
 
+async function toolLatexToMathType() {
+  const btn = document.getElementById("btnLatexToMathType");
+  const summaryDiv = document.getElementById("mathSummary");
+  
+  setStatus("Đang chạy MathType (Hãy xem trên Word)...", "loading");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "#ec4899";
+  summaryDiv.style.backgroundColor = "rgba(236, 72, 153, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang điều khiển MathType qua Local Server... ⏳";
+
+  btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/convert", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const data = await response.json();
+    if (data.status === "success") {
+      summaryDiv.innerHTML = "<strong>Thành công:</strong> " + data.message;
+      summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+      setStatus("Chuyển đổi hoàn tất!", "success");
+    } else {
+      throw new Error(data.message || "Lỗi từ Server.");
+    }
+  } catch (error) {
+    console.error("MathType Error:", error);
+    summaryDiv.innerHTML = "<strong>Lỗi Kết Nối:</strong> Không tìm thấy MathType Server. Vui lòng tắt và chạy lại file cài đặt để mở Server ngầm.";
+    summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Không tìm thấy Server.", "error");
+  } finally {
+    btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+  }
+}
+
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("btnClean").addEventListener("click", runAutoClean);
@@ -1123,6 +1159,7 @@ Office.onReady((info) => {
     document.getElementById("btnFindReplace").addEventListener("click", toolFindReplace);
     document.getElementById("btnLatexToWord").addEventListener("click", toolLatexToWord);
     document.getElementById("btnWordToLatex").addEventListener("click", toolWordToLatex);
+    document.getElementById("btnLatexToMathType").addEventListener("click", toolLatexToMathType);
     document.getElementById("geminiApiKey").value = localStorage.getItem("geminiApiKey") || "";
   }
 });

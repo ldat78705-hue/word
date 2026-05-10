@@ -8,7 +8,7 @@
   <Version>1.0.1.4</Version>
   <ProviderName>AddonWord Team</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Tiện ích"/>
+  <DisplayName DefaultValue="Tien Ich"/>
   <Description DefaultValue="Lam sach van ban copy tu nguon khac trong Word."/>
   <IconUrl DefaultValue="https://word-td.vercel.app/icon.png"/>
   <HighResolutionIconUrl DefaultValue="https://word-td.vercel.app/icon.png"/>
@@ -35,6 +35,7 @@
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="Cleaner.Group">
+                <!-- Tên hiển thị của Group trên thanh menu -->
                 <Label resid="Cleaner.GroupLabel"/>
                 <Icon>
                   <bt:Image size="16" resid="Icon.16x16"/>
@@ -42,6 +43,7 @@
                   <bt:Image size="80" resid="Icon.80x80"/>
                 </Icon>
                 <Control xsi:type="Button" id="Cleaner.TaskpaneButton">
+                  <!-- Tên hiển thị của Nút bấm -->
                   <Label resid="Cleaner.ButtonLabel"/>
                   <Supertip>
                     <Title resid="Cleaner.ButtonLabel"/>
@@ -61,6 +63,43 @@
             </OfficeTab>
           </ExtensionPoint>
         </DesktopFormFactor>
+        <BrowserFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+          </GetStarted>
+          <FunctionFile resid="Taskpane.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="Cleaner.Group">
+                <Label resid="Cleaner.GroupLabel"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16"/>
+                  <bt:Image size="32" resid="Icon.32x32"/>
+                  <bt:Image size="80" resid="Icon.80x80"/>
+                </Icon>
+                <Control xsi:type="Button" id="Cleaner.TaskpaneButton">
+                  <!-- Tên hiển thị của Nút bấm trên Word Online -->
+                  <Label resid="Cleaner.ButtonLabel"/>
+                  <Supertip>
+                    <Title resid="Cleaner.ButtonLabel"/>
+                    <Description resid="Cleaner.ButtonTooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>ButtonId1</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </BrowserFormFactor>
       </Host>
     </Hosts>
     <Resources>
@@ -74,9 +113,10 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://word-td.vercel.app/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Tiện ích"/>
-        <bt:String id="Cleaner.GroupLabel" DefaultValue="Tiện ích"/>
-        <bt:String id="Cleaner.ButtonLabel" DefaultValue="Mở Tiện ích"/>
+        <!-- KHÔNG NÊN ĐỂ TIẾNG VIỆT CÓ DẤU Ở ĐÂY SẼ BỊ LỖI FONT -->
+        <bt:String id="GetStarted.Title" DefaultValue="Tien Ich"/>
+        <bt:String id="Cleaner.GroupLabel" DefaultValue="Tien Ich"/>
+        <bt:String id="Cleaner.ButtonLabel" DefaultValue="Mo Tien Ich"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="GetStarted.Description" DefaultValue="Mo bang cong cu de sua loi dinh dang khi copy van ban."/>
