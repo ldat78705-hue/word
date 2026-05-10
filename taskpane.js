@@ -163,7 +163,7 @@ async function toolRemoveLinks() {
 async function toolChangeCase(toUpper) {
   setStatus("Đang chuyển đổi...", "loading");
   try {
-    const response = await fetch("http://127.0.0.1:8000/change-case", {
+    const response = await fetch("http://localhost:8000/change-case", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ to_upper: toUpper })
@@ -185,10 +185,11 @@ async function toolChangeCase(toUpper) {
       });
       setStatus("Đã chuyển chữ thành công.", "success");
     } catch(e) {
-      if (e.message && e.message.includes("GeneralException")) {
-        setStatus("Lỗi: Vui lòng không bôi đen công thức MathType khi dùng tính năng này (hoặc bật Server).", "error");
+      let msg = e.message || e.code || String(e);
+      if (msg.includes("GeneralException")) {
+        setStatus("Lỗi: Vui lòng không bôi đen công thức MathType khi dùng tính năng này.", "error");
       } else {
-        setStatus(e.message, "error");
+        setStatus(msg, "error");
       }
     }
   }
@@ -214,7 +215,7 @@ async function toolApplyFont() {
     
     // Yêu cầu Server đổi Font của MathType
     try {
-      const response = await fetch("http://127.0.0.1:8000/format-mathtype", {
+      const response = await fetch("http://localhost:8000/format-mathtype", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ font_name: fontName, font_size: fontSize })
