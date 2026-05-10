@@ -187,8 +187,8 @@ if (Test-Path $serverSrc) {
         $Shortcut.WindowStyle = 7 # Minimized
         $Shortcut.Save()
         
-        # Chay luon server ngay bay gio
-        Start-Process -FilePath $serverDest -WindowStyle Hidden
+        # Chay luon server ngay bay gio (thong qua explorer de ha quyen Admin ve quyen User, giup bat duoc COM Word dang mo)
+        Start-Process -FilePath "explorer.exe" -ArgumentList $serverDest
         Write-Host "-> [OK] Da cai dat va khoi dong MathType Server ngam." -ForegroundColor Green
     } catch {
         Write-Host "-> [!] Loi khi copy MathType Server. Vui long tat cac file Word va thu lai." -ForegroundColor Red

@@ -347,25 +347,25 @@ input:checked + .slider:before {
 
 .status-msg {
   position: fixed;
-  bottom: 20px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%) translateY(100px);
+  transform: translate(-50%, -50%) scale(0.9);
   background: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  font-size: 14px;
-  font-weight: 500;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  font-size: 15px;
+  font-weight: 600;
   z-index: 1000;
   opacity: 0;
   pointer-events: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   text-align: center;
   max-width: 90%;
 }
 
 .status-msg.show {
-  transform: translateX(-50%) translateY(0);
+  transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
 
