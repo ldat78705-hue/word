@@ -48,8 +48,11 @@ function parseGeminiError(errorMsg) {
   if (msg.includes("quota") || msg.includes("exceeded") || msg.includes("429")) {
     return "API Key đã quá tải (Quota exceeded). Vui lòng đợi 1 phút và thử lại, hoặc dùng API Key mới!";
   }
-  if (msg.includes("api key not valid") || msg.includes("api_key_invalid") || msg.includes("400")) {
+  if (msg.includes("api key not valid") || msg.includes("api_key_invalid")) {
     return "API Key không hợp lệ hoặc đã bị khóa. Vui lòng kiểm tra lại!";
+  }
+  if (msg.includes("400")) {
+    return "Yêu cầu không hợp lệ (Lỗi 400). Có thể kích thước ảnh quá lớn hoặc định dạng không hỗ trợ.";
   }
   if (msg.includes("network") || msg.includes("fetch")) {
     return "Mạng bị lỗi hoặc bị chặn kết nối tới máy chủ Google.";
@@ -275,10 +278,11 @@ async function callGeminiApi() {
     });
     
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    if (!data.candidates) throw new Error("AI không phản hồi.");
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI không phản hồi.");
     
-    let responseText = data.candidates[0].content.parts[0].text;
+    let responseText = data.candidates[0].content?.parts?.[0]?.text;
+    if (!responseText) throw new Error("Kết quả bị chặn hoặc không có nội dung.");
     let resultObj;
     try {
       resultObj = JSON.parse(extractJsonFromText(responseText));
@@ -519,8 +523,14 @@ OUTPUT JSON (exercises: [{problemMarkdown: "", solutionMarkdown: ""}])\`;
     let modelName = await getGeminiModel(apiKey);
     let parts = [{ text: finalPrompt }];
     if (base64Image) {
-      let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
-      parts.push({ inlineData: { mimeType: mime, data: base64Image.split(",")[1] || base64Image } });
+      let dataImg = base64Image;
+      let mime = "image/jpeg";
+      if (dataImg.startsWith("data:")) {
+        mime = dataImg.split(";")[0].split(":")[1];
+        dataImg = dataImg.split(",")[1];
+      }
+      dataImg = dataImg.replace(/\s+/g, "");
+      parts.push({ inlineData: { mimeType: mime, data: dataImg } });
     }
 
     const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/\${modelName}:generateContent?key=\${apiKey}\`, {
@@ -529,9 +539,10 @@ OUTPUT JSON (exercises: [{problemMarkdown: "", solutionMarkdown: ""}])\`;
     });
     
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    if (!data.candidates) throw new Error("AI không phản hồi.");
-    let responseText = data.candidates[0].content.parts[0].text;
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI không phản hồi.");
+    let responseText = data.candidates[0].content?.parts?.[0]?.text;
+    if (!responseText) throw new Error("AI bị chặn kết quả hoặc không có nội dung.");
     let resultObj = JSON.parse(extractJsonFromText(responseText));
 
     await Word.run(async (context) => {
@@ -595,8 +606,14 @@ TUYỆT ĐỐI không chèn tiếng việt vào mã Latex.
 TRẢ VỀ TOÀN BỘ KẾT QUẢ BẰNG HTML (không bọc trong khối code markdown nào cả):\`;
 
     let modelName = await getGeminiModel(apiKey);
-    let mime = base64Image.split(";")[0].split(":")[1] || "image/jpeg";
-    let parts = [{ text: finalPrompt }, { inlineData: { mimeType: mime, data: base64Image.split(",")[1] || base64Image } }];
+    let dataImg = base64Image;
+    let mime = "image/jpeg";
+    if (dataImg.startsWith("data:")) {
+      mime = dataImg.split(";")[0].split(":")[1];
+      dataImg = dataImg.split(",")[1];
+    }
+    dataImg = dataImg.replace(/\s+/g, "");
+    let parts = [{ text: finalPrompt }, { inlineData: { mimeType: mime, data: dataImg } }];
 
     const res = await fetch(\`https://generativelanguage.googleapis.com/v1beta/models/\${modelName}:generateContent?key=\${apiKey}\`, {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -604,10 +621,11 @@ TRẢ VỀ TOÀN BỘ KẾT QUẢ BẰNG HTML (không bọc trong khối code ma
     });
     
     const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    if (!data.candidates) throw new Error("AI không thể đọc ảnh.");
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+    if (!data.candidates || data.candidates.length === 0) throw new Error("AI không thể đọc ảnh.");
     
-    let responseText = data.candidates[0].content.parts[0].text;
+    let responseText = data.candidates[0].content?.parts?.[0]?.text;
+    if (!responseText) throw new Error("Phản hồi AI bị chặn hoặc không có nội dung.");
     responseText = cleanLatexForMathType(responseText);
     let cleanText = responseText.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
     cleanText = formatTextToHtml(cleanText);
