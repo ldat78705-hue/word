@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tiện Ích</title>
-  <link rel="stylesheet" href="taskpane.css?v=9" />
+  <link rel="stylesheet" href="taskpane.css?v=10" />
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -40,11 +40,12 @@
 
     <div class="glass-panel">
       <h2><span class="icon">🧮</span> Chuyển Đổi Toán Học</h2>
-      <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">(Tích hợp Server xử lý siêu tốc cục bộ & AI Gemini)</div>
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">(Tích hợp Server xử lý cục bộ 100% - Không dùng AI)</div>
       <div class="tool-grid" style="grid-template-columns: 1fr 1fr;">
-        <button id="btnLatexToWord" class="tool-btn" style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary);" title="Bôi đen văn bản chứa mã $...$ hoặc $$...$$">LaTeX ➡️ Word Equation</button>
-        <button id="btnWordToLatex" class="tool-btn" style="background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;" title="Bôi đen công thức của Word">Word Equation ➡️ LaTeX</button>
-        <button id="btnLatexToMathType" class="tool-btn" style="grid-column: span 2; background: rgba(236, 72, 153, 0.1); border-color: #ec4899; color: #ec4899;" title="Kết nối trực tiếp MathType cục bộ (Yêu cầu Server nền)">LaTeX ➡️ MathType (Cục bộ)</button>
+        <button id="btnLatexToWord" class="tool-btn" style="background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary);" title="Chuyển đổi sang phương trình chuẩn của Word">LaTeX ➡️ Word Eq</button>
+        <button id="btnWordToLatex" class="tool-btn" style="background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;" title="Chuyển đổi Word Eq sang mã LaTeX">Word Eq ➡️ LaTeX</button>
+        <button id="btnLatexToMathType" class="tool-btn" style="background: rgba(236, 72, 153, 0.1); border-color: #ec4899; color: #ec4899;" title="Sử dụng MathType để render công thức">LaTeX ➡️ MathType</button>
+        <button id="btnMathTypeToLatex" class="tool-btn" style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b;" title="Chuyển đổi từ MathType về mã LaTeX">MathType ➡️ LaTeX</button>
       </div>
       <div id="mathSummary" class="ai-summary" style="display: none; margin-top: 8px;" onclick="this.style.display='none'"></div>
     </div>
@@ -193,6 +194,6 @@
       display: none;
     }
   </style>
-  <script src="taskpane.js?v=9"></script>
+  <script src="taskpane.js?v=10"></script>
 </body>
 </html>

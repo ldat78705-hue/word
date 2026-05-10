@@ -1033,82 +1033,26 @@ async function toolLatexToWord() {
 async function toolWordToLatex() {
   const btn = document.getElementById("btnWordToLatex");
   const summaryDiv = document.getElementById("mathSummary");
-  const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
 
-  setStatus("Đang lấy mã LaTeX từ Word Eq...", "loading");
+  setStatus("Đang chạy Word Eq -> LaTeX...", "loading");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "#10b981";
   summaryDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang trích xuất LaTeX... ⏳";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang kết nối tới Server cục bộ... ⏳";
 
   btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
 
   try {
-    let sourceHtml = "";
-    await Word.run(async (context) => {
-      let range = context.document.getSelection();
-      let html = range.getHtml();
-      await context.sync();
-      sourceHtml = html.value;
-      if (!sourceHtml || sourceHtml.trim() === "") {
-        range = context.document.body.getRange();
-        html = range.getHtml();
-        await context.sync();
-        sourceHtml = html.value;
-      }
-    });
+    const response = await fetch("http://localhost:8000/wordeq-to-latex", { method: "POST" });
+    const data = await response.json();
+    if (data.status === "error") throw new Error(data.message);
 
-    if (!sourceHtml) throw new Error("Vui lòng bôi đen đoạn văn bản chứa công thức.");
-
-    // Trích xuất các thẻ MathML/OMath
-    let mathRegex = /<m:oMath[\s\S]*?<\/m:oMath>|<math[\s\S]*?<\/math>/gi;
-    let matches = sourceHtml.match(mathRegex);
-    if (!matches || matches.length === 0) throw new Error("Không tìm thấy công thức Word Equation nào trong vùng chọn.");
-
-    const prompt = `Convert the following JSON array of MathML/OOXML equations into LaTeX expressions.
-Return ONLY a JSON array of strings in the exact same order, containing the LaTeX wrapped in $...$.
-Do not wrap in markdown code blocks.
-Array:
-${JSON.stringify(matches)}`;
-
-    let modelName = await getGeminiModel(apiKey);
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
-    
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    
-    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim();
-    let latexArray = JSON.parse(cleanText);
-
-    if (!Array.isArray(latexArray) || latexArray.length !== matches.length) {
-      throw new Error("AI trả về mảng LaTeX không khớp số lượng công thức.");
-    }
-
-    let resultHtml = sourceHtml;
-    for (let i = 0; i < matches.length; i++) {
-        resultHtml = resultHtml.replace(matches[i], latexArray[i]);
-    }
-
-    await Word.run(async (context) => {
-      let range = context.document.getSelection();
-      range.load("text");
-      await context.sync();
-      if (!range.text || range.text.trim().length === 0) {
-        range = context.document.body.getRange();
-      }
-      range.insertHtml(resultHtml, Word.InsertLocation.replace);
-      await context.sync();
-    });
-
-    summaryDiv.innerHTML = "<strong>Thành công:</strong> Đã chuyển công thức thành mã LaTeX!";
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> ${data.message || "Đã chuyển đổi thành công!"}`;
     summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
-    setStatus("Trích xuất hoàn tất!", "success");
+    setStatus("Chuyển đổi hoàn tất!", "success");
   } catch (error) {
     let friendlyError = getFriendlyErrorMessage(error);
+    if(friendlyError.includes("Failed to fetch")) friendlyError = "Không thể kết nối Server. Vui lòng chạy lại file cài đặt.";
     summaryDiv.innerHTML = "<strong>Lỗi:</strong> " + friendlyError;
     summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
     setStatus("Lỗi chuyển đổi.", "error");
@@ -1121,7 +1065,7 @@ async function toolLatexToMathType() {
   const btn = document.getElementById("btnLatexToMathType");
   const summaryDiv = document.getElementById("mathSummary");
   
-  setStatus("Đang chạy MathType (Hãy xem trên Word)...", "loading");
+  setStatus("Đang chạy LaTeX -> MathType...", "loading");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "#ec4899";
   summaryDiv.style.backgroundColor = "rgba(236, 72, 153, 0.1)";
@@ -1130,22 +1074,48 @@ async function toolLatexToMathType() {
   btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/convert", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }
-    });
-
+    const response = await fetch("http://localhost:8000/latex-to-mathtype", { method: "POST" });
     const data = await response.json();
-    if (data.status === "success") {
-      summaryDiv.innerHTML = "<strong>Thành công:</strong> " + data.message;
-      summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
-      setStatus("Chuyển đổi hoàn tất!", "success");
-    } else {
-      throw new Error(data.message || "Lỗi từ Server.");
-    }
+    if (data.status === "error") throw new Error(data.message);
+
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> ${data.message || "Chuyển đổi thành công!"}`;
+    summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Chuyển đổi hoàn tất!", "success");
   } catch (error) {
-    console.error("MathType Error:", error);
-    summaryDiv.innerHTML = "<strong>Lỗi Kết Nối:</strong> Không tìm thấy MathType Server. Vui lòng tắt và chạy lại file cài đặt để mở Server ngầm.";
+    let friendlyError = getFriendlyErrorMessage(error);
+    if(friendlyError.includes("Failed to fetch")) friendlyError = "Không tìm thấy MathType Server cục bộ.";
+    summaryDiv.innerHTML = "<strong>Lỗi Kết Nối:</strong> " + friendlyError;
+    summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    setStatus("Không tìm thấy Server.", "error");
+  } finally {
+    btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
+  }
+}
+
+async function toolMathTypeToLatex() {
+  const btn = document.getElementById("btnMathTypeToLatex");
+  const summaryDiv = document.getElementById("mathSummary");
+  
+  setStatus("Đang chạy MathType -> LaTeX...", "loading");
+  summaryDiv.style.display = "block";
+  summaryDiv.style.borderLeftColor = "#f59e0b";
+  summaryDiv.style.backgroundColor = "rgba(245, 158, 11, 0.1)";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang điều khiển MathType qua Local Server... ⏳";
+
+  btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
+
+  try {
+    const response = await fetch("http://localhost:8000/mathtype-to-latex", { method: "POST" });
+    const data = await response.json();
+    if (data.status === "error") throw new Error(data.message);
+
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> ${data.message || "Chuyển đổi thành công!"}`;
+    summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    setStatus("Chuyển đổi hoàn tất!", "success");
+  } catch (error) {
+    let friendlyError = getFriendlyErrorMessage(error);
+    if(friendlyError.includes("Failed to fetch")) friendlyError = "Không tìm thấy MathType Server cục bộ.";
+    summaryDiv.innerHTML = "<strong>Lỗi Kết Nối:</strong> " + friendlyError;
     summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
     setStatus("Không tìm thấy Server.", "error");
   } finally {
@@ -1168,6 +1138,7 @@ Office.onReady((info) => {
     document.getElementById("btnLatexToWord").addEventListener("click", toolLatexToWord);
     document.getElementById("btnWordToLatex").addEventListener("click", toolWordToLatex);
     document.getElementById("btnLatexToMathType").addEventListener("click", toolLatexToMathType);
+    document.getElementById("btnMathTypeToLatex").addEventListener("click", toolMathTypeToLatex);
     document.getElementById("geminiApiKey").value = localStorage.getItem("geminiApiKey") || "";
   }
 });
