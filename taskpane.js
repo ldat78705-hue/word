@@ -169,28 +169,16 @@ async function toolChangeCase(toUpper) {
       body: JSON.stringify({ to_upper: toUpper })
     });
     const data = await response.json();
-    if (data.status === "success") {
-      setStatus("Đã chuyển chữ thành công (qua Server).", "success");
-      return;
+    if (data.status === "error") {
+      throw new Error(data.message);
     }
+    setStatus("Đã chuyển chữ thành công.", "success");
   } catch (err) {
-    // Nếu server tắt, dùng Office.js (có thể bị lỗi nếu chọn MathType)
-    try {
-      await Word.run(async (context) => {
-        let range = await getRange(context, false);
-        if (!range.text) return;
-        let newText = toUpper ? range.text.toUpperCase() : range.text.toLowerCase();
-        range.insertText(newText, Word.InsertLocation.replace);
-        await context.sync();
-      });
-      setStatus("Đã chuyển chữ thành công.", "success");
-    } catch(e) {
-      let msg = e.message || e.code || String(e);
-      if (msg.includes("GeneralException")) {
-        setStatus("Lỗi: Vui lòng không bôi đen công thức MathType khi dùng tính năng này.", "error");
-      } else {
-        setStatus(msg, "error");
-      }
+    let msg = err.message || err.toString();
+    if (msg.includes("Failed to fetch")) {
+      setStatus("Không thể kết nối đến Server. Vui lòng mở lại Add-in.", "error");
+    } else {
+      setStatus("Lỗi từ Server: " + msg, "error");
     }
   }
 }
@@ -233,38 +221,6 @@ async function toolApplyFont() {
   } catch(e) { setStatus(e.message, "error"); }
 }
 
-async function toolSwapNumbers() {
-  setStatus("Đang đổi chuẩn số...", "loading");
-  try {
-    await Word.run(async (context) => {
-      let range = await getRange(context);
-      let results = range.search("[0-9,\.]{3,}", { matchWildcards: true });
-      results.load("items, text");
-      await context.sync();
-      for (let i = 0; i < results.items.length; i++) {
-        let txt = results.items[i].text;
-        if (txt.includes(',') || txt.includes('.')) {
-          let newTxt = txt;
-          let oldTxt;
-          do {
-            oldTxt = newTxt;
-            // Chỉ tráo đổi nếu dấu , hoặc . nằm giữa 2 chữ số (bảo toàn dấu chấm câu ở cuối)
-            newTxt = newTxt.replace(/(\d),(\d)/g, "$1TEMP$2");
-            newTxt = newTxt.replace(/(\d)\.(\d)/g, "$1COMMA$2");
-            newTxt = newTxt.replace(/TEMP/g, ".");
-            newTxt = newTxt.replace(/COMMA/g, ",");
-          } while (newTxt !== oldTxt);
-          
-          if (newTxt !== txt) {
-            results.items[i].insertText(newTxt, Word.InsertLocation.replace);
-          }
-        }
-      }
-      await context.sync();
-    });
-    setStatus("Đã đổi định dạng số thành công.", "success");
-  } catch(e) { setStatus(e.message, "error"); }
-}
 
 // Hàm dịch font cũ đã bị gỡ.
 
@@ -1223,7 +1179,6 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("btnClean").addEventListener("click", runAutoClean);
     document.getElementById("btnRemoveLinks").addEventListener("click", toolRemoveLinks);
-    document.getElementById("btnSwapNumbers").addEventListener("click", toolSwapNumbers);
     document.getElementById("btnUpperCase").addEventListener("click", () => toolChangeCase(true));
     document.getElementById("btnLowerCase").addEventListener("click", () => toolChangeCase(false));
     document.getElementById("btnApplyFont").addEventListener("click", toolApplyFont);
