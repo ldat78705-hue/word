@@ -295,8 +295,13 @@ async function callGeminiApi() {
 - Ký hiệu: Tam giác dùng \\Delta, Góc dùng \\widehat{ABC}, Đồng dạng dùng \\sim, Bằng nhau dùng = (CẤM dùng \\cong, \\angle, \\triangle).
 - Phép nhân dùng \\cdot, Số thập phân dùng phẩy (,).
 - Đo góc dùng ^\\circ. Song song // hoặc \\parallel, vuông góc \\perp.
+- ĐƠN VỊ ĐO LƯỜNG: Các đơn vị vật lý, hóa học, toán học (như diện tích, khối lượng, độ dài... ví dụ: $cm^2$, $kg$, $m/s$) BẮT BUỘC PHẢI ĐƯỢC BỌC TRONG BLOCK LATEX (nằm trong cặp dấu $...$).
 - Nếu phát hiện chữ lỗi font TCVN3/VNI, hãy tự động dịch sang Unicode chuẩn.
 - Nếu cần kẻ bảng, HÃY DÙNG MÃ HTML (<table>, <tr>, <td> với style viền đen) để Word có thể hiển thị bảng trực tiếp!
+3. ĐỊNH DẠNG TRẮC NGHIỆM KHÔNG BULLET:
+- Đối với câu hỏi trắc nghiệm, các phương án A, B, C, D (hoặc a, b, c, d) BẮT BUỘC phải bắt đầu trực tiếp ở đầu dòng.
+- Tuyệt đối KHÔNG dùng định dạng danh sách tự động (bullet points).
+- KHÔNG dùng dấu sao (*), dấu gạch ngang (-), hay dấu chấm tròn (•) ở trước phương án.
 `;
 
     let isEditing = false;
@@ -372,7 +377,7 @@ async function callGeminiApi() {
                 .split(/\n{1,}/)
                 .map(p => p.trim())
                 .filter(p => p !== '')
-                .map(p => `<p style="margin-top: 6pt; margin-bottom: 6pt; font-family: 'Times New Roman', serif; font-size: 14pt; line-height: 1.15;">${p}</p>`)
+                .map(p => `<p style="margin-top: 6pt; margin-bottom: 6pt; font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.15;">${p}</p>`)
                 .join('');
             }
             range.insertHtml(html, Word.InsertLocation.replace);
@@ -617,14 +622,14 @@ async function callGeminiDuplicate() {
   if (!apiKey) return setStatus("Vui lòng nhập API Key để sử dụng Gemini.", "error");
 
   localStorage.setItem("geminiApiKey", apiKey);
-  setStatus(`AI đang nhân bản ${numExercises} bài tập...`, "loading");
+  setStatus(`AI đang tạo ${numExercises} bài tập tương tự...`, "loading");
   
   // Hiển thị trạng thái ngay tại khu vực nút
   const summaryDiv = document.getElementById("aiSummary");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "#e11d48";
   summaryDiv.style.backgroundColor = "rgba(225, 29, 72, 0.1)";
-  summaryDiv.innerHTML = `<strong>Đang xử lý:</strong> AI đang nhân bản ${numExercises} bài tập, vui lòng chờ... ⏳`;
+  summaryDiv.innerHTML = `<strong>Đang xử lý:</strong> AI đang tạo ${numExercises} bài tập tương tự, vui lòng chờ... ⏳`;
 
   // Khóa nút trong quá trình xử lý
   btn.disabled = true;
@@ -669,6 +674,7 @@ QUAN TRỌNG NHẤT:
 1. **Giữ nguyên dạng toán**: Bài tập mới phải dùng cùng phương pháp giải.
 2. **THAY SỐ LIỆU THÔNG MINH**: Áp dụng triệt để quy tắc **MATH_BEAUTY_RULES** dưới đây. Không random số bừa bãi.
 3. **QUY TẮC CỨNG VỚI HÌNH VẼ**: BỎ QUA HOÀN TOÀN các câu hỏi/bài tập có chứa đồ thị, hình học, hoặc các placeholder liên quan đến hình vẽ. Không tạo bài tập tương tự cho các câu này vì hệ thống không thể chèn ảnh gốc sang bài tập mới. Chỉ nhân bản các bài toán không cần hình vẽ minh hoạ.
+4. **ĐỊNH DẠNG TRẮC NGHIỆM KHÔNG BULLET**: Đối với câu hỏi trắc nghiệm, các phương án A, B, C, D (hoặc a, b, c, d) BẮT BUỘC phải bắt đầu trực tiếp ở đầu dòng. Tuyệt đối không dùng định dạng danh sách tự động (bullet), không dùng dấu sao (*), dấu gạch ngang (-) hay dấu chấm tròn (•) ở trước.
 
 **QUY TẮC "SỐ LIỆU ĐẸP & CHÍNH XÁC" (MATH BEAUTY RULES):**
 Để đảm bảo tính chuẩn xác và sự logic trong toán học, khoa học:
@@ -700,6 +706,7 @@ QUAN TRỌNG NHẤT:
 6. **Độ & Dấu phẩy thập phân**: Đo góc phải có độ (^\\circ). Dấu thập phân của Việt Nam bắt buộc là dấu phẩy , ($3,14$ thay vì $3.14$).
 7. **Song song & Vuông góc**: Dùng \\parallel (hoặc //) và \\perp.
 8. **Hệ phương trình / Hệ điều kiện**: Khi dùng \\begin{cases} ... \\end{cases}, nếu cần ghi chú (thỏa mãn/loại), CHỈ dùng chữ viết tắt tiếng Việt không dấu: (\\text{TM}) hoặc (\\text{L}) để tránh lỗi font MathType. 
+9. **ĐƠN VỊ ĐO LƯỜNG**: Các đơn vị vật lý, hóa học, toán học (như diện tích, khối lượng, độ dài... ví dụ: $cm^2$, $kg$, $m/s$) **BẮT BUỘC PHẢI ĐƯỢC BỌC TRONG BLOCK LATEX** (tức là nằm trong dấu $...$). Ví dụ đúng: $50$ $kg$, $100$ $cm^2$. Tuyệt đối không viết đơn vị ở dạng văn bản thường nếu nó đi liền với số liệu.
 
 ---
 **QUY TRÌNH KIỂM DUYỆT CHẤT LƯỢNG 3 LỚP (3-LAYER QA PROTOCOL):**
@@ -787,7 +794,7 @@ OUTPUT JSON:
         let problemHtml = formatTextToHtml(cleanProblem);
         let solutionHtml = formatTextToHtml(cleanSolution);
         htmlOutput += `
-        <div style="margin-top: 15px; margin-bottom: 15px; font-family: 'Times New Roman', serif; font-size: 14pt;">
+        <div style="margin-top: 15px; margin-bottom: 15px; font-family: 'Times New Roman', serif; font-size: 13pt;">
           <p style="margin-bottom: 6pt;"><strong>Đề bài:</strong><br>${problemHtml}</p>
           <p style="margin-top: 6pt;"><strong>Lời giải:</strong><br>${solutionHtml}</p>
         </div>`;
@@ -812,7 +819,7 @@ OUTPUT JSON:
     summaryDiv.style.display = "block";
     summaryDiv.style.borderLeftColor = "var(--error)";
     summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
-    setStatus("Quá trình nhân bản bị lỗi.", "error");
+    setStatus("Quá trình tạo bài tập tương tự bị lỗi.", "error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalBtnText;
@@ -829,14 +836,14 @@ async function callGeminiDigitize() {
   if (!apiKey) return setStatus("Vui lòng nhập API Key để sử dụng Gemini.", "error");
 
   localStorage.setItem("geminiApiKey", apiKey);
-  setStatus("AI đang số hoá ảnh thành văn bản...", "loading");
+  setStatus("AI đang chuyển ảnh thành Word...", "loading");
   
   // Hiển thị trạng thái ngay tại khu vực nút
   const summaryDiv = document.getElementById("aiSummary");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "#10b981";
   summaryDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang quét và số hoá ảnh, vui lòng chờ... ⏳";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang quét và chuyển đổi ảnh, vui lòng chờ... ⏳";
 
   btn.disabled = true;
   const originalBtnText = btn.innerHTML;
@@ -876,6 +883,7 @@ QUY TẮC QUAN TRỌNG:
 3. **Nội dung đề**: Chuyển thành văn bản. Giữ nguyên cấu trúc (Trắc nghiệm/Tự luận). Bắt đầu từ sau phần Header (nếu có).
 4. **Hình ảnh**: Thay thế các hình vẽ/đồ thị bằng cách ghi chú [HÌNH_X] (X là số thứ tự 1, 2...).
 5. **Bảng biểu & Đáp án**: BẮT BUỘC phải giữ nguyên tối đa cấu trúc bảng. Trình bày bằng cấu trúc BẢNG HTML (Dùng <table>, <tr>, <td>). Không dùng bảng Markdown vì Word không tự chuyển đổi được.
+6. **ĐỊNH DẠNG TRẮC NGHIỆM KHÔNG BULLET**: Đối với câu hỏi trắc nghiệm, các phương án A, B, C, D (hoặc a, b, c, d) BẮT BUỘC phải bắt đầu trực tiếp ở đầu dòng. Tuyệt đối không dùng định dạng danh sách tự động (bullet), không dùng dấu sao (*), dấu gạch ngang (-) hay dấu chấm tròn (•) ở trước.
 
 **QUY TẮC VỀ ĐỊNH DẠNG TOÁN HỌC (CỰC KỲ QUAN TRỌNG ĐỂ KHÔNG BỊ LỖI MATHTYPE TRONG WORD):**
 Để đảm bảo tính sư phạm và tương thích hoàn toàn với phần mềm MathType khi giáo viên dán vào MS Word, bạn **BẮT BUỘC** phải tuân thủ các quy tắc sau:
@@ -897,6 +905,7 @@ QUY TẮC QUAN TRỌNG:
 6. **Độ & Dấu phẩy thập phân**: Đo góc phải có độ (^\\circ). Dấu thập phân của Việt Nam bắt buộc là dấu phẩy , ($3,14$ thay vì $3.14$).
 7. **Song song & Vuông góc**: Dùng \\parallel (hoặc //) và \\perp.
 8. **Hệ phương trình / Hệ điều kiện**: Khi dùng \\begin{cases} ... \\end{cases}, nếu cần ghi chú (thỏa mãn/loại), CHỈ dùng chữ viết tắt tiếng Việt không dấu: (\\text{TM}) hoặc (\\text{L}) để tránh lỗi font MathType. 
+9. **ĐƠN VỊ ĐO LƯỜNG**: Các đơn vị vật lý, hóa học, toán học (như diện tích, khối lượng, độ dài... ví dụ: $cm^2$, $kg$, $m/s$) **BẮT BUỘC PHẢI ĐƯỢC BỌC TRONG BLOCK LATEX** (tức là nằm trong dấu $...$). Ví dụ đúng: $50$ $kg$, $100$ $cm^2$. Tuyệt đối không viết đơn vị ở dạng văn bản thường nếu nó đi liền với số liệu.
 
 ---
 **QUY TRÌNH KIỂM DUYỆT CHẤT LƯỢNG 3 LỚP (3-LAYER QA PROTOCOL):**
@@ -959,8 +968,7 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
       let range = context.document.getSelection();
       
       let htmlOutput = `
-        <div style="margin-top: 10px; margin-bottom: 10px; border: 1px dashed #10b981; padding: 10px; font-family: 'Times New Roman', serif; font-size: 14pt;">
-          <h3 style="color: #10b981; text-align: center; font-size: 16pt;">VĂN BẢN ĐÃ SỐ HOÁ</h3>
+        <div style="margin-top: 10px; margin-bottom: 10px; font-family: 'Times New Roman', serif; font-size: 13pt;">
           <div>${cleanText}</div>
         </div><br>`;
 
@@ -970,11 +978,11 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
     });
     
     const summaryDiv = document.getElementById("aiSummary");
-    summaryDiv.innerHTML = `<strong>Thành công:</strong> Quá trình quét và số hoá ảnh đã hoàn tất.`;
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> Quá trình quét và chuyển đổi ảnh đã hoàn tất.`;
     summaryDiv.style.display = "block";
     summaryDiv.style.borderLeftColor = "var(--success)";
     summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
-    setStatus("Đã số hoá ảnh thành công!", "success");
+    setStatus("Đã chuyển ảnh thành Word thành công!", "success");
 
   } catch (error) {
     const summaryDiv = document.getElementById("aiSummary");
@@ -983,7 +991,7 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
     summaryDiv.style.display = "block";
     summaryDiv.style.borderLeftColor = "var(--error)";
     summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
-    setStatus("Quá trình quét ảnh bị lỗi.", "error");
+    setStatus("Quá trình chuyển ảnh thành Word bị lỗi.", "error");
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalBtnText;
