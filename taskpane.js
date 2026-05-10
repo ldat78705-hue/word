@@ -160,28 +160,6 @@ async function toolRemoveLinks() {
   } catch(e) { setStatus(e.message, "error"); }
 }
 
-async function toolChangeCase(toUpper) {
-  setStatus("Đang chuyển đổi...", "loading");
-  try {
-    const response = await fetch("http://localhost:8000/change-case", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ to_upper: toUpper })
-    });
-    const data = await response.json();
-    if (data.status === "error") {
-      throw new Error(data.message);
-    }
-    setStatus("Đã chuyển chữ thành công.", "success");
-  } catch (err) {
-    let msg = err.message || err.toString();
-    if (msg.includes("Failed to fetch")) {
-      setStatus("Không thể kết nối đến Server. Vui lòng mở lại Add-in.", "error");
-    } else {
-      setStatus("Lỗi từ Server: " + msg, "error");
-    }
-  }
-}
 
 async function toolApplyFont() {
   const fontName = document.getElementById("fontName").value || "Times New Roman";
@@ -1179,8 +1157,6 @@ Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     document.getElementById("btnClean").addEventListener("click", runAutoClean);
     document.getElementById("btnRemoveLinks").addEventListener("click", toolRemoveLinks);
-    document.getElementById("btnUpperCase").addEventListener("click", () => toolChangeCase(true));
-    document.getElementById("btnLowerCase").addEventListener("click", () => toolChangeCase(false));
     document.getElementById("btnApplyFont").addEventListener("click", toolApplyFont);
     document.getElementById("btnTestLines").addEventListener("click", toolAddTestLines);
     document.getElementById("btnFormatMCQ").addEventListener("click", toolFormatMCQ);
