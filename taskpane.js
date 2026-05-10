@@ -161,19 +161,37 @@ async function toolRemoveLinks() {
 }
 
 async function toolChangeCase(toUpper) {
-  setStatus("Đang chuyển đổi chữ...", "loading");
+  setStatus("Đang chuyển đổi...", "loading");
   try {
-    await Word.run(async (context) => {
-      let range = await getRange(context);
-      range.load("text");
-      await context.sync();
-      if (!range.text) return;
-      let newText = toUpper ? range.text.toUpperCase() : range.text.toLowerCase();
-      range.insertText(newText, Word.InsertLocation.replace);
-      await context.sync();
+    const response = await fetch("http://127.0.0.1:8000/change-case", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ to_upper: toUpper })
     });
-    setStatus("Đã chuyển chữ thành công.", "success");
-  } catch(e) { setStatus(e.message, "error"); }
+    const data = await response.json();
+    if (data.status === "success") {
+      setStatus("Đã chuyển chữ thành công (qua Server).", "success");
+      return;
+    }
+  } catch (err) {
+    // Nếu server tắt, dùng Office.js (có thể bị lỗi nếu chọn MathType)
+    try {
+      await Word.run(async (context) => {
+        let range = await getRange(context, false);
+        if (!range.text) return;
+        let newText = toUpper ? range.text.toUpperCase() : range.text.toLowerCase();
+        range.insertText(newText, Word.InsertLocation.replace);
+        await context.sync();
+      });
+      setStatus("Đã chuyển chữ thành công.", "success");
+    } catch(e) {
+      if (e.message && e.message.includes("GeneralException")) {
+        setStatus("Lỗi: Vui lòng không bôi đen công thức MathType khi dùng tính năng này (hoặc bật Server).", "error");
+      } else {
+        setStatus(e.message, "error");
+      }
+    }
+  }
 }
 
 async function toolApplyFont() {
@@ -1070,11 +1088,16 @@ async function toolLatexToWord() {
 
     if (!sourceText || sourceText.trim().length === 0) throw new Error("Vui lòng bôi đen văn bản chứa mã LaTeX.");
 
-    const prompt = `Convert all LaTeX math expressions in the following text into MathML format. 
-You must output the exact same text, but replace every LaTeX formula (like $...$ or $$...$$) with its corresponding <math xmlns="http://www.w3.org/1998/Math/MathML">...</math> tag.
-Return ONLY the final HTML string. Do not include markdown code blocks, do not explain.
-Text:
-${sourceText}`;
+    // Trích xuất tất cả LaTeX bằng Regex
+    let latexRegex = /\$\$[\s\S]*?\$\$|\$[^$]+\$/g;
+    let matches = sourceText.match(latexRegex);
+    if (!matches || matches.length === 0) throw new Error("Không tìm thấy công thức LaTeX nào trong vùng chọn.");
+
+    const prompt = `Convert the following JSON array of LaTeX math expressions into MathML format. 
+Return ONLY a JSON array of strings in the exact same order, containing the MathML.
+Do not wrap in markdown code blocks.
+Array:
+${JSON.stringify(matches)}`;
 
     let modelName = await getGeminiModel(apiKey);
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
@@ -1085,7 +1108,12 @@ ${sourceText}`;
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
     
-    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim();
+    let mathmlArray = JSON.parse(cleanText);
+
+    if (!Array.isArray(mathmlArray) || mathmlArray.length !== matches.length) {
+      throw new Error("AI trả về mảng MathML không khớp số lượng công thức.");
+    }
 
     await Word.run(async (context) => {
       let range = context.document.getSelection();
@@ -1094,7 +1122,20 @@ ${sourceText}`;
       if (!range.text || range.text.trim().length === 0) {
         range = context.document.body.getRange();
       }
-      range.insertHtml(cleanText, Word.InsertLocation.replace);
+      
+      // Tìm và thay thế từng công thức một
+      for (let i = 0; i < matches.length; i++) {
+        let oldTex = matches[i];
+        let newMathML = mathmlArray[i];
+        
+        let searchResults = range.search(oldTex, { matchCase: true, matchWildcards: false });
+        searchResults.load("items");
+        await context.sync();
+        
+        for (let j = 0; j < searchResults.items.length; j++) {
+           searchResults.items[j].insertHtml(newMathML, Word.InsertLocation.replace);
+        }
+      }
       await context.sync();
     });
 
@@ -1142,11 +1183,16 @@ async function toolWordToLatex() {
 
     if (!sourceHtml) throw new Error("Vui lòng bôi đen đoạn văn bản chứa công thức.");
 
-    const prompt = `Extract and convert all MathML/OMML equations from the following HTML into LaTeX format.
-You must output the plain text, replacing every math equation with its LaTeX equivalent wrapped in $...$.
-Return ONLY the final plain string. Do not use markdown blocks.
-HTML:
-${sourceHtml}`;
+    // Trích xuất các thẻ MathML/OMath
+    let mathRegex = /<m:oMath[\s\S]*?<\/m:oMath>|<math[\s\S]*?<\/math>/gi;
+    let matches = sourceHtml.match(mathRegex);
+    if (!matches || matches.length === 0) throw new Error("Không tìm thấy công thức Word Equation nào trong vùng chọn.");
+
+    const prompt = `Convert the following JSON array of MathML/OOXML equations into LaTeX expressions.
+Return ONLY a JSON array of strings in the exact same order, containing the LaTeX wrapped in $...$.
+Do not wrap in markdown code blocks.
+Array:
+${JSON.stringify(matches)}`;
 
     let modelName = await getGeminiModel(apiKey);
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
@@ -1157,7 +1203,17 @@ ${sourceHtml}`;
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
     
-    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`html/gi, '').replace(/\`\`\`/g, '').trim();
+    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim();
+    let latexArray = JSON.parse(cleanText);
+
+    if (!Array.isArray(latexArray) || latexArray.length !== matches.length) {
+      throw new Error("AI trả về mảng LaTeX không khớp số lượng công thức.");
+    }
+
+    let resultHtml = sourceHtml;
+    for (let i = 0; i < matches.length; i++) {
+        resultHtml = resultHtml.replace(matches[i], latexArray[i]);
+    }
 
     await Word.run(async (context) => {
       let range = context.document.getSelection();
@@ -1166,7 +1222,7 @@ ${sourceHtml}`;
       if (!range.text || range.text.trim().length === 0) {
         range = context.document.body.getRange();
       }
-      range.insertText(cleanText, Word.InsertLocation.replace);
+      range.insertHtml(resultHtml, Word.InsertLocation.replace);
       await context.sync();
     });
 

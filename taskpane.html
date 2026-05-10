@@ -37,15 +37,6 @@
       </div>
     </div>
 
-    <div class="glass-panel">
-      <h2><span class="icon">🔍</span> Tìm & Thay Thế</h2>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <input type="text" id="findText" placeholder="Từ cần tìm..." class="custom-input">
-        <input type="text" id="replaceText" placeholder="Thay bằng..." class="custom-input">
-        <button id="btnFindReplace" class="tool-btn" style="width: 100%; justify-content: center; padding: 10px 0;">🔄 Thay thế tất cả</button>
-        <div id="findReplaceSummary" class="ai-summary" style="display: none; border-left-color: var(--primary);" onclick="this.style.display='none'"></div>
-      </div>
-    </div>
 
     <div class="glass-panel">
       <h2><span class="icon">🧮</span> Chuyển Đổi Toán Học</h2>
@@ -170,6 +161,16 @@
         </button>
       </div>
       <div id="status" class="status-msg"></div>
+    </div>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🔍</span> Tìm & Thay Thế</h2>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <input type="text" id="findText" placeholder="Từ cần tìm..." class="custom-input">
+        <input type="text" id="replaceText" placeholder="Thay bằng..." class="custom-input">
+        <button id="btnFindReplace" class="tool-btn" style="width: 100%; justify-content: center; padding: 10px 0;">🔄 Thay thế tất cả</button>
+        <div id="findReplaceSummary" class="ai-summary" style="display: none; border-left-color: var(--primary);" onclick="this.style.display='none'"></div>
+      </div>
     </div>
   </main>
   <style>
