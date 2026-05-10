@@ -33,7 +33,7 @@
           <input type="number" id="numExercises" value="1" min="1" max="10" class="custom-input" style="width: 50px; text-align: center; font-weight: bold; color: #e11d48;" title="Số lượng">
         </div>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 11px; color: var(--primary); margin-top: 8px; display: inline-block;">+ Lấy API Key miễn phí tại đây</a>
-        <div id="aiSummary" class="ai-summary" style="display: none;"></div>
+        <div id="aiSummary" class="ai-summary" style="display: none;" onclick="this.style.display='none'"></div>
       </div>
     </div>
 
@@ -43,23 +43,7 @@
         <input type="text" id="findText" placeholder="Từ cần tìm..." class="custom-input">
         <input type="text" id="replaceText" placeholder="Thay bằng..." class="custom-input">
         <button id="btnFindReplace" class="tool-btn" style="width: 100%; justify-content: center; padding: 10px 0;">🔄 Thay thế tất cả</button>
-        <div id="findReplaceSummary" class="ai-summary" style="display: none; margin-top: 4px; border-left-color: var(--primary);"></div>
-      </div>
-    </div>
-
-    <div class="glass-panel">
-      <h2><span class="icon">🧰</span> Tiện ích Nhanh</h2>
-      <div class="tool-grid">
-        <button id="btnFormatMCQ" class="tool-btn" title="Dồn 4 đáp án trắc nghiệm ngắn A, B, C, D về cùng 1 dòng ngang" style="grid-column: span 2; border-color: var(--primary); background: rgba(99, 102, 241, 0.05);">🔠 Dồn Trắc Nghiệm</button>
-        <div style="grid-column: span 2; display: flex; gap: 8px;">
-          <button id="btnTestLines" class="tool-btn" style="flex: 1;" title="Tự động kẻ dòng chấm (.) để làm bài tập">📝 Kẻ Dòng Bài Tập</button>
-          <input type="number" id="numTestLines" value="3" min="1" max="50" class="custom-input" style="width: 60px; text-align: center; color: var(--primary); font-weight: 600; padding: 4px;" title="Số dòng kẻ">
-        </div>
-        <button id="btnRemoveLinks" class="tool-btn" title="Xóa toàn bộ gạch chân và màu xanh của Link ẩn">🔗 Xóa Hyperlink</button>
-        <button id="btnSwapNumbers" class="tool-btn" title="Đảo ngược phẩy và chấm (1,000.5 -> 1.000,5)">🔢 Đổi Dấu Số</button>
-        <button id="btnUpperCase" class="tool-btn" title="Viết in hoa toàn bộ">🔠 IN HOA</button>
-        <button id="btnLowerCase" class="tool-btn" title="Viết in thường toàn bộ">🔡 in thường</button>
-        <button id="btnFixLatex" class="tool-btn" title="Đẩy tiếng Việt ra khỏi $...$ để chống lỗi MathType" style="grid-column: span 2; background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;">🛠️ Sửa Lỗi LaTeX (MathType)</button>
+        <div id="findReplaceSummary" class="ai-summary" style="display: none; border-left-color: var(--primary);" onclick="this.style.display='none'"></div>
       </div>
     </div>
 
@@ -71,7 +55,28 @@
         <button id="btnWordToLatex" class="tool-btn" style="background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;" title="Bôi đen công thức của Word">Word Equation ➡️ LaTeX</button>
         <button id="btnLatexToMathType" class="tool-btn" style="grid-column: span 2; background: rgba(236, 72, 153, 0.1); border-color: #ec4899; color: #ec4899;" title="Kết nối trực tiếp MathType cục bộ (Yêu cầu Server nền)">LaTeX ➡️ MathType (Cục bộ)</button>
       </div>
-      <div id="mathSummary" class="ai-summary" style="display: none; margin-top: 8px;"></div>
+      <div id="mathSummary" class="ai-summary" style="display: none; margin-top: 8px;" onclick="this.style.display='none'"></div>
+    </div>
+
+    <div class="glass-panel">
+      <h2><span class="icon">🧰</span> Tiện ích Nhanh</h2>
+      <div class="tool-grid">
+        <button id="btnFormatMCQ" class="tool-btn" title="Dồn 4 đáp án trắc nghiệm ngắn A, B, C, D về cùng 1 dòng ngang" style="grid-column: span 2; border-color: var(--primary); background: rgba(99, 102, 241, 0.05);">🔠 Dồn Trắc Nghiệm</button>
+        <div style="grid-column: span 2; display: flex; gap: 8px;">
+          <button id="btnTestLines" class="tool-btn" style="flex: 1;" title="Tự động kẻ dòng chấm (.) để làm bài tập">📝 Kẻ Dòng Bài Tập</button>
+          <input type="number" id="numTestLines" value="3" min="1" max="50" class="custom-input" style="width: 60px; text-align: center; color: var(--primary); font-weight: 600; padding: 4px;" title="Số dòng kẻ">
+        </div>
+        <div style="grid-column: span 2; display: flex; gap: 8px;">
+          <input type="text" id="fontName" value="Times New Roman" class="custom-input" style="flex: 2; font-weight: 600; padding: 4px;" title="Tên Phông chữ">
+          <input type="number" id="fontSize" value="13" min="8" max="72" class="custom-input" style="flex: 1; text-align: center; font-weight: 600; padding: 4px;" title="Cỡ chữ">
+          <button id="btnApplyFont" class="tool-btn" style="flex: 2; background: rgba(99, 102, 241, 0.1); border-color: var(--primary); color: var(--primary);" title="Áp dụng Phông và Cỡ chữ">🔤 Đổi Font</button>
+        </div>
+        <button id="btnRemoveLinks" class="tool-btn" title="Xóa toàn bộ gạch chân và màu xanh của Link ẩn">🔗 Xóa Hyperlink</button>
+        <button id="btnSwapNumbers" class="tool-btn" title="Đảo ngược phẩy và chấm (1,000.5 -> 1.000,5)">🔢 Đổi Dấu Số</button>
+        <button id="btnUpperCase" class="tool-btn" title="Viết in hoa toàn bộ">🔠 IN HOA</button>
+        <button id="btnLowerCase" class="tool-btn" title="Viết in thường toàn bộ">🔡 in thường</button>
+        <button id="btnFixLatex" class="tool-btn" title="Đẩy tiếng Việt ra khỏi $...$ để chống lỗi MathType" style="grid-column: span 2; background: rgba(16, 185, 129, 0.1); border-color: #10b981; color: #10b981;">🛠️ Sửa Lỗi LaTeX (MathType)</button>
+      </div>
     </div>
 
     <div class="glass-panel" style="border-color: var(--primary);">
@@ -115,7 +120,7 @@
           <label class="toggle-option" style="margin-bottom: 0;">
             <div class="toggle-text">
               <strong>Đồng bộ Font chuẩn</strong>
-              <span>Đưa toàn bộ về Times New Roman, cỡ 14</span>
+              <span>Đưa toàn bộ về phông chữ chuẩn (Cỡ 13)</span>
             </div>
             <div class="toggle-switch">
               <input type="checkbox" id="optStandardFont" checked />

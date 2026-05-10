@@ -160,6 +160,58 @@ async function toolRemoveLinks() {
   } catch(e) { setStatus(e.message, "error"); }
 }
 
+async function toolChangeCase(toUpper) {
+  setStatus("Đang chuyển đổi chữ...", "loading");
+  try {
+    await Word.run(async (context) => {
+      let range = await getRange(context);
+      range.load("text");
+      await context.sync();
+      if (!range.text) return;
+      let newText = toUpper ? range.text.toUpperCase() : range.text.toLowerCase();
+      range.insertText(newText, Word.InsertLocation.replace);
+      await context.sync();
+    });
+    setStatus("Đã chuyển chữ thành công.", "success");
+  } catch(e) { setStatus(e.message, "error"); }
+}
+
+async function toolApplyFont() {
+  const fontName = document.getElementById("fontName").value || "Times New Roman";
+  const fontSize = parseInt(document.getElementById("fontSize").value) || 13;
+  
+  setStatus("Đang áp dụng phông chữ...", "loading");
+  try {
+    await Word.run(async (context) => {
+      let range = await getRange(context, true); // Chấp nhận document nếu không bôi đen
+      if (!range.text && getScope() !== "document") {
+        range = context.document.body.getRange(); // Mặc định toàn bộ nếu không bôi đen
+      }
+      range.font.name = fontName;
+      range.font.size = fontSize;
+      await context.sync();
+    });
+    
+    // Yêu cầu Server đổi Font của MathType
+    try {
+      const response = await fetch("http://127.0.0.1:8000/format-mathtype", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ font_name: fontName, font_size: fontSize })
+      });
+      const data = await response.json();
+      if (data.status === "success") {
+        setStatus("Đã đổi Phông chữ & MathType thành công.", "success");
+      } else {
+        setStatus("Đổi chữ thành công (Bỏ qua MathType do lỗi Server).", "success");
+      }
+    } catch(e) {
+      // Nếu server không mở, cứ báo thành công cho text
+      setStatus("Đã đổi chữ thành công (Bỏ qua MathType).", "success");
+    }
+  } catch(e) { setStatus(e.message, "error"); }
+}
+
 async function toolSwapNumbers() {
   setStatus("Đang đổi chuẩn số...", "loading");
   try {
@@ -411,7 +463,7 @@ async function processAutoClean(context, range, options) {
   }
   if (options.standardFont) {
     range.font.name = "Times New Roman";
-    range.font.size = 14; 
+    range.font.size = 13; 
   }
 
   // 3. Bảng biểu & Ảnh
@@ -987,15 +1039,15 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
 
 async function toolLatexToWord() {
   const btn = document.getElementById("btnLatexToWord");
+  const summaryDiv = document.getElementById("mathSummary");
   const apiKey = document.getElementById("geminiApiKey").value.trim();
   if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
 
-  setStatus("Đang chuyển đổi LaTeX sang Word Equation...", "loading");
-  const summaryDiv = document.getElementById("mathSummary");
+  setStatus("Đang dịch sang Word Equation...", "loading");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "var(--primary)";
   summaryDiv.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
-  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang dịch mã LaTeX sang MathML, vui lòng chờ... ⏳";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang dịch mã LaTeX sang định dạng Word... ⏳";
 
   btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
 
@@ -1006,6 +1058,12 @@ async function toolLatexToWord() {
       range.load("text");
       await context.sync();
       sourceText = range.text;
+      if (!sourceText || sourceText.trim().length === 0) {
+        range = context.document.body.getRange();
+        range.load("text");
+        await context.sync();
+        sourceText = range.text;
+      }
     });
 
     if (!sourceText || sourceText.trim().length === 0) throw new Error("Vui lòng bôi đen văn bản chứa mã LaTeX.");
@@ -1029,6 +1087,11 @@ ${sourceText}`;
 
     await Word.run(async (context) => {
       let range = context.document.getSelection();
+      range.load("text");
+      await context.sync();
+      if (!range.text || range.text.trim().length === 0) {
+        range = context.document.body.getRange();
+      }
       range.insertHtml(cleanText, Word.InsertLocation.replace);
       await context.sync();
     });
@@ -1048,15 +1111,15 @@ ${sourceText}`;
 
 async function toolWordToLatex() {
   const btn = document.getElementById("btnWordToLatex");
+  const summaryDiv = document.getElementById("mathSummary");
   const apiKey = document.getElementById("geminiApiKey").value.trim();
   if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
 
-  setStatus("Đang dịch công thức Word sang LaTeX...", "loading");
-  const summaryDiv = document.getElementById("mathSummary");
+  setStatus("Đang lấy mã LaTeX từ Word Eq...", "loading");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "#10b981";
   summaryDiv.style.backgroundColor = "rgba(16, 185, 129, 0.1)";
-  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang phân tích OOXML để chuyển sang LaTeX... ⏳";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang trích xuất LaTeX... ⏳";
 
   btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
 
@@ -1067,6 +1130,12 @@ async function toolWordToLatex() {
       let html = range.getHtml();
       await context.sync();
       sourceHtml = html.value;
+      if (!sourceHtml || sourceHtml.trim() === "") {
+        range = context.document.body.getRange();
+        html = range.getHtml();
+        await context.sync();
+        sourceHtml = html.value;
+      }
     });
 
     if (!sourceHtml) throw new Error("Vui lòng bôi đen đoạn văn bản chứa công thức.");
@@ -1090,13 +1159,18 @@ ${sourceHtml}`;
 
     await Word.run(async (context) => {
       let range = context.document.getSelection();
+      range.load("text");
+      await context.sync();
+      if (!range.text || range.text.trim().length === 0) {
+        range = context.document.body.getRange();
+      }
       range.insertText(cleanText, Word.InsertLocation.replace);
       await context.sync();
     });
 
     summaryDiv.innerHTML = "<strong>Thành công:</strong> Đã chuyển công thức thành mã LaTeX!";
     summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
-    setStatus("Chuyển đổi hoàn tất!", "success");
+    setStatus("Trích xuất hoàn tất!", "success");
   } catch (error) {
     let friendlyError = getFriendlyErrorMessage(error);
     summaryDiv.innerHTML = "<strong>Lỗi:</strong> " + friendlyError;
@@ -1150,6 +1224,7 @@ Office.onReady((info) => {
     document.getElementById("btnSwapNumbers").addEventListener("click", toolSwapNumbers);
     document.getElementById("btnUpperCase").addEventListener("click", () => toolChangeCase(true));
     document.getElementById("btnLowerCase").addEventListener("click", () => toolChangeCase(false));
+    document.getElementById("btnApplyFont").addEventListener("click", toolApplyFont);
     document.getElementById("btnTestLines").addEventListener("click", toolAddTestLines);
     document.getElementById("btnFormatMCQ").addEventListener("click", toolFormatMCQ);
     document.getElementById("btnFixLatex").addEventListener("click", toolFixLatex);

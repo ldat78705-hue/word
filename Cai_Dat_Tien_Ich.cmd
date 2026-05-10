@@ -167,7 +167,8 @@ Write-Host "-> [OK] Da tao file manifest.xml" -ForegroundColor Green
 
 # 4.5 Copy MathType Server và tạo Startup
 Write-Host "[4/6] Cai dat Server MathType cuc bo..." -ForegroundColor Yellow
-$serverSrc = "$PSScriptRoot\MathTypeServer.exe"
+$currentDir = (Get-Location).Path
+$serverSrc = "$currentDir\MathTypeServer.exe"
 $serverDest = "$installDir\MathTypeServer.exe"
 
 # Tat process cu neu dang chay
@@ -236,6 +237,7 @@ try {
     }
     Set-ItemProperty -Path $hkcuPath -Name "Url" -Value "\\localhost\$shareName" -ErrorAction Stop
     Set-ItemProperty -Path $hkcuPath -Name "Flags" -Value 1 -Type DWord -ErrorAction Stop
+    
     $successCount++
 } catch { }
 
