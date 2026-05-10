@@ -1061,92 +1061,35 @@ Trước khi xuất ra kết quả cuối cùng, bạn **PHẢI** thực hiện 
 async function toolLatexToWord() {
   const btn = document.getElementById("btnLatexToWord");
   const summaryDiv = document.getElementById("mathSummary");
-  const apiKey = document.getElementById("geminiApiKey").value.trim();
-  if (!apiKey) return setStatus("Vui lòng nhập API Key ở mục Trợ lý AI trước.", "error");
 
   setStatus("Đang dịch sang Word Equation...", "loading");
   summaryDiv.style.display = "block";
   summaryDiv.style.borderLeftColor = "var(--primary)";
   summaryDiv.style.backgroundColor = "rgba(99, 102, 241, 0.1)";
-  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> AI đang dịch mã LaTeX sang định dạng Word... ⏳";
+  summaryDiv.innerHTML = "<strong>Đang xử lý:</strong> Đang kết nối tới Server cục bộ... ⏳";
 
   btn.disabled = true; btn.style.opacity = "0.7"; btn.style.cursor = "not-allowed";
 
   try {
-    let sourceText = "";
-    await Word.run(async (context) => {
-      let range = context.document.getSelection();
-      range.load("text");
-      await context.sync();
-      sourceText = range.text;
-      if (!sourceText || sourceText.trim().length === 0) {
-        range = context.document.body.getRange();
-        range.load("text");
-        await context.sync();
-        sourceText = range.text;
-      }
-    });
-
-    if (!sourceText || sourceText.trim().length === 0) throw new Error("Vui lòng bôi đen văn bản chứa mã LaTeX.");
-
-    // Trích xuất tất cả LaTeX bằng Regex
-    let latexRegex = /\$\$[\s\S]*?\$\$|\$[^$]+\$/g;
-    let matches = sourceText.match(latexRegex);
-    if (!matches || matches.length === 0) throw new Error("Không tìm thấy công thức LaTeX nào trong vùng chọn.");
-
-    const prompt = `Convert the following JSON array of LaTeX math expressions into MathML format. 
-Return ONLY a JSON array of strings in the exact same order, containing the MathML.
-Do not wrap in markdown code blocks.
-Array:
-${JSON.stringify(matches)}`;
-
-    let modelName = await getGeminiModel(apiKey);
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    const response = await fetch("http://localhost:8000/latex-to-word", {
+      method: "POST"
     });
     
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    
-    let cleanText = data.candidates[0].content.parts[0].text.replace(/\`\`\`json/gi, '').replace(/\`\`\`/g, '').trim();
-    let mathmlArray = JSON.parse(cleanText);
+    const data = await response.json();
+    if (data.status === "error") throw new Error(data.message);
 
-    if (!Array.isArray(mathmlArray) || mathmlArray.length !== matches.length) {
-      throw new Error("AI trả về mảng MathML không khớp số lượng công thức.");
-    }
-
-    await Word.run(async (context) => {
-      let range = context.document.getSelection();
-      range.load("text");
-      await context.sync();
-      if (!range.text || range.text.trim().length === 0) {
-        range = context.document.body.getRange();
-      }
-      
-      // Tìm và thay thế từng công thức một
-      for (let i = 0; i < matches.length; i++) {
-        let oldTex = matches[i];
-        let newMathML = mathmlArray[i];
-        
-        let searchResults = range.search(oldTex, { matchCase: true, matchWildcards: false });
-        searchResults.load("items");
-        await context.sync();
-        
-        for (let j = 0; j < searchResults.items.length; j++) {
-           searchResults.items[j].insertHtml(newMathML, Word.InsertLocation.replace);
-        }
-      }
-      await context.sync();
-    });
-
-    summaryDiv.innerHTML = "<strong>Thành công:</strong> Đã chuyển mã LaTeX sang Word Equation!";
-    summaryDiv.style.borderLeftColor = "var(--success)"; summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
+    summaryDiv.innerHTML = `<strong>Thành công:</strong> Đã chuyển đổi thành công ${data.count || 0} công thức LaTeX sang Word Equation!`;
+    summaryDiv.style.borderLeftColor = "var(--success)"; 
+    summaryDiv.style.backgroundColor = "rgba(46, 204, 113, 0.1)";
     setStatus("Chuyển đổi hoàn tất!", "success");
   } catch (error) {
     let friendlyError = getFriendlyErrorMessage(error);
+    if(friendlyError.includes("Failed to fetch")) {
+      friendlyError = "Không thể kết nối đến Server. Vui lòng kiểm tra lại quá trình cài đặt Server cục bộ.";
+    }
     summaryDiv.innerHTML = "<strong>Lỗi:</strong> " + friendlyError;
-    summaryDiv.style.borderLeftColor = "var(--error)"; summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
+    summaryDiv.style.borderLeftColor = "var(--error)"; 
+    summaryDiv.style.backgroundColor = "rgba(239, 68, 68, 0.1)";
     setStatus("Lỗi chuyển đổi.", "error");
   } finally {
     btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer";
