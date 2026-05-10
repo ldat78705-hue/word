@@ -183,9 +183,11 @@ async function toolApplyFont() {
   setStatus("Đang áp dụng phông chữ...", "loading");
   try {
     await Word.run(async (context) => {
-      let range = await getRange(context, true); // Chấp nhận document nếu không bôi đen
-      if (!range.text && getScope() !== "document") {
-        range = context.document.body.getRange(); // Mặc định toàn bộ nếu không bôi đen
+      let range = context.document.getSelection();
+      range.load("text");
+      await context.sync();
+      if (!range.text || range.text.trim().length === 0) {
+        range = context.document.body.getRange();
       }
       range.font.name = fontName;
       range.font.size = fontSize;
